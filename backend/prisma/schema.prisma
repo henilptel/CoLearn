@@ -35,6 +35,8 @@ model User {
   reporterUserReports UserReport[] @relation("UserReporter")
 
   @@map("users")
+  meetingBookingsRequested MeetingBooking[] @relation("MeetingRequester")
+  meetingBookingsReceived MeetingBooking[] @relation("MeetingReceiver")
 }
 
 model Skill {
@@ -60,6 +62,7 @@ model SwapRequest {
   requester   User              @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
 
   @@map("swap_requests")
+  MeetingBooking MeetingBooking[]
 }
 
 model Rating {
@@ -85,6 +88,7 @@ model TimeSlot {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("time_slots")
+  MeetingBooking MeetingBooking[]
 }
 
 model Session {
@@ -96,6 +100,31 @@ model Session {
   updatedAt DateTime @updatedAt
 
   @@map("sessions")
+}
+
+model MeetingBooking {
+  id           String      @id @default(uuid())
+  swapRequest  SwapRequest @relation(fields: [swapRequestId], references: [id], onDelete: Cascade)
+  swapRequestId String
+  timeSlot     TimeSlot    @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  timeSlotId   String
+  requester    User        @relation("MeetingRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  requesterId  String
+  receiver     User        @relation("MeetingReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId   String
+  meetingLink  String?     @db.VarChar(500)
+  status       MeetingStatus @default(SCHEDULED)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("meeting_bookings")
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
 }
 
 enum SwapRequestStatus {
