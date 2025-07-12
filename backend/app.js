@@ -12,12 +12,13 @@ const bcrypt = require("bcryptjs");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5174"],
     credentials: true,
   })
 );
@@ -116,6 +117,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/user",userRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
