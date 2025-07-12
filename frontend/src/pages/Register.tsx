@@ -3,13 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { userAPI } from '../apis/user';
 import CleanAuthSidebar from '../components/CleanAuthSidebar';
+import { useBasicRegistration } from '../contexts/RegistrationContext';
 
 const Register: React.FC = () => {
+  const { data: basicData, updateData } = useBasicRegistration();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
+    firstName: basicData?.firstName || '',
+    lastName: basicData?.lastName || '',
+    email: basicData?.email || '',
+    password: basicData?.password || '',
     confirmPassword: ''
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -45,7 +47,18 @@ const Register: React.FC = () => {
       });
       
       if (response.data.message === "User registered successfully") {
+        // Store basic registration data in context
+        updateData({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+        });
+        
+        // Store user in localStorage for session
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // Navigate to next step
         navigate('/register/1');
       } else {
         throw new Error(response.data.message || 'Registration failed');
