@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String        @id @default(uuid())
+  email           String        @unique @db.VarChar(100)
+  password        String        @db.VarChar(255)
+  name            String        @db.VarChar(100)
+  location        String?       @db.VarChar(255)
+  bio             String?
+  experience_years      Int     @default(0)
+  profilePhoto    String?       @db.VarChar(500)
+  isPublic        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  isActive        Boolean       @default(true)
+  googleAccessToken     String?   @db.Text
+  googleRefreshToken    String?   @db.Text
+  googleTokenExpiryDate DateTime?
+  ratingsGiven    Rating[]      @relation("RatingGiver")
+  ratingsReceived Rating[]      @relation("RatingReceiver")
+  swapReceived    SwapRequest[] @relation("SwapReceiver")
+  swapRequests    SwapRequest[] @relation("SwapRequester")
+  timeSlots       TimeSlot[]
+  skillsOffered   Skill[]       @relation("SkillsOffered")
+  skillsWanted    Skill[]       @relation("SkillsWanted")
+  bannedUser      BannedUser?
+  reportedUserReports UserReport[] @relation("ReportedUser")
+  reporterUserReports UserReport[] @relation("UserReporter")
+
+  @@map("users")
+  meetingBookingsRequested MeetingBooking[] @relation("MeetingRequester")
+  meetingBookingsReceived MeetingBooking[] @relation("MeetingReceiver")
+}
+
+model Skill {
+  id            String        @id @default(uuid())
+  name          String        @db.VarChar(100)
+  description   String
+  category      SkillCategory
+  usersOffering User[]        @relation("SkillsOffered")
+  usersWanting  User[]        @relation("SkillsWanted")
+
+  @@map("skills")
+}
+
+model SwapRequest {
+  id          String            @id @default(uuid())
+  requesterId String
+  receiverId  String
+  message     String?
+  offeredSkill String?          @db.VarChar(100)
+  requestedSkill String?        @db.VarChar(100)
+  timeSlotId  String?
+  status      SwapRequestStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  receiver    User              @relation("SwapReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  requester   User              @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  timeSlot    TimeSlot?         @relation(fields: [timeSlotId], references: [id])
+
+  @@map("swap_requests")
+  MeetingBooking MeetingBooking[]
+}
+
+model Rating {
+  id         String   @id @default(uuid())
+  rating     Int      @db.SmallInt
+  feedback   String
+  giverId    String
+  receiverId String
+  createdAt  DateTime @default(now())
+  giver      User     @relation("RatingGiver", fields: [giverId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("RatingReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([giverId, receiverId])
+  @@map("ratings")
+}
+
+model TimeSlot {
+  id     String @id @default(uuid())
+  day    Day
+  from   String
+  to     String
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  swapRequests SwapRequest[]
+
+  @@map("time_slots")
+  MeetingBooking MeetingBooking[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  sid       String   @unique @db.VarChar(255)
+  data      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
+
+model MeetingBooking {
+  id           String      @id @default(uuid())
+  swapRequest  SwapRequest @relation(fields: [swapRequestId], references: [id], onDelete: Cascade)
+  swapRequestId String
+  timeSlot     TimeSlot    @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+  timeSlotId   String
+  requester    User        @relation("MeetingRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  requesterId  String
+  receiver     User        @relation("MeetingReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverId   String
+  meetingLink  String?     @db.VarChar(500)
+  status       MeetingStatus @default(SCHEDULED)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("meeting_bookings")
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum SwapRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum Day {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum SkillCategory {
+  TECHNOLOGY
+  DESIGN
+  LANGUAGE
+  MUSIC
+  BUSINESS
+  COOKING
+  FITNESS
+  CRAFTS
+  PHOTOGRAPHY
+  WRITING
+  TUTORING
+  LIFESTYLE
+  AUTOMOTIVE
+  HOME_IMPROVEMENT
+  GARDENING
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
+
+model Admin {
+    id        String   @id @default(uuid())
+    email     String   @unique @db.VarChar(100)
+    name      String   @db.VarChar(100)
+    password  String   // Hashed password
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    isActive  Boolean  @default(true)
+
+    // Relations
+    bannedUsers        BannedUser[]
+    platformMessages   PlatformMessage[]
+    userReports        UserReport[]
+
+    @@map("admins")
+}
+
+
+model BannedUser {
+    id        String   @id @default(uuid())
+    userId    String   @unique
+    adminId   String
+    reason    String   @db.Text
+    bannedAt  DateTime @default(now())
+    isActive  Boolean  @default(true) 
+
+    // Relations
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+    @@map("banned_users")
+}
+
+
+model PlatformMessage {
+    id        String      @id @default(uuid())
+    title     String      @db.VarChar(200)
+    content   String      @db.Text
+    type      String      @default("GENERAL")
+    adminId   String
+    createdAt DateTime    @default(now())
+    isActive  Boolean     @default(true)
+
+    // Relations
+    admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+    @@map("platform_messages")
+}
+
+
+model UserReport {
+    id           String       @id @default(uuid())
+    reportedId   String
+    reporterId   String?
+    adminId      String?
+    reason       String       @db.Text
+    actionTaken   String      @db.Text
+    status       ReportStatus @default(PENDING)
+    createdAt    DateTime     @default(now())
+    resolvedAt   DateTime?
+
+    // Relations
+    reported User   @relation("ReportedUser", fields: [reportedId], references: [id], onDelete: Cascade)
+    reporter User?  @relation("UserReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+    admin    Admin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+    @@map("user_reports")
+}
