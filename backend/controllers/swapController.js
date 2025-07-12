@@ -8,9 +8,45 @@ exports.createSwapRequest = async (req, res) => {
     // Check if receiver exists
     const receiver = await prisma.user.findUnique({
       where: { id: receiverId },
+      include: {
+        skillsOffered: true,
+      },
     });
     if (!receiver) {
       return res.status(404).json({ message: "Receiver not found" });
+    }
+
+    // Get requester with skills
+    const requester = await prisma.user.findUnique({
+      where: { id: requesterId },
+      include: {
+        skillsOffered: true,
+      },
+    });
+    if (!requester) {
+      return res.status(404).json({ message: "Requester not found" });
+    }
+
+    // Validate that requester has skills to offer
+    if (!requester.skillsOffered || requester.skillsOffered.length === 0) {
+      return res.status(400).json({ message: "Please add skills to your profile before sending swap requests" });
+    }
+
+    // Validate that receiver has skills to offer
+    if (!receiver.skillsOffered || receiver.skillsOffered.length === 0) {
+      return res.status(400).json({ message: "This user has no skills listed to learn from" });
+    }
+
+    // Validate that the offered skill exists in requester's skillsOffered
+    const hasOfferedSkill = requester.skillsOffered.some(skill => skill.name === offeredSkill);
+    if (!hasOfferedSkill) {
+      return res.status(400).json({ message: "You don't have the offered skill in your profile" });
+    }
+
+    // Validate that the requested skill exists in receiver's skillsOffered
+    const hasRequestedSkill = receiver.skillsOffered.some(skill => skill.name === requestedSkill);
+    if (!hasRequestedSkill) {
+      return res.status(400).json({ message: "The requested skill is not available from this user" });
     }
 
     // If timeSlotId is provided, validate it
