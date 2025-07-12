@@ -9,6 +9,7 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 const prisma = require("./models/prismaClient");
 const bcrypt = require("bcryptjs");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 const authRoutes = require("./routes/authRoutes");
 
@@ -57,6 +58,50 @@ passport.use(
   )
 );
 
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      scope: [
+        "profile",
+        "email",
+        "https://www.googleapis.com/auth/calendar"
+      ],
+      passReqToCallback: true,
+    },
+    async (req, accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await prisma.user.findUnique({ where: { email: profile.emails[0].value } });
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              email: profile.emails[0].value,
+              name: profile.displayName,
+              profilePhoto: profile.photos[0]?.value,
+              isPublic: true,
+              googleAccessToken: accessToken,
+              googleRefreshToken: refreshToken,
+            },
+          });
+        } else {
+          user = await prisma.user.update({
+            where: { email: profile.emails[0].value },
+            data: {
+              googleAccessToken: accessToken,
+              googleRefreshToken: refreshToken,
+            },
+          });
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err, null);
+      }
+    }
+  )
+);
+
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
   try {
@@ -72,7 +117,7 @@ app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
