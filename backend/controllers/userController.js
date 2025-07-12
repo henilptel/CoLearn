@@ -31,42 +31,28 @@ exports.updateUserProfile = async (req, res, next) => {
       bio, 
       isPublic, 
       profilePhoto, 
-      skillsInterested, 
       timeSlots,
-      currentPost,
       experienceYears,
-      experienceMonths,
-      name,
-      ...otherData 
+      name
     } = req.body;
     const userId = req.user.id;
 
     // Start a transaction for complex updates
     const result = await prisma.$transaction(async (tx) => {
-      // Update basic user info with only valid fields
-      const updateData = {
-        location,
-        bio,
-        isPublic,
-        profilePhoto,
-      };
-
-      // Add name if provided
-      if (name) {
-        updateData.name = name;
-      }
-
+      // Update basic user info with only valid fields that exist in the schema
+      const updateData = {};
+      
+      // Only add fields that actually exist in the User schema
+      if (location !== undefined) updateData.location = location;
+      if (bio !== undefined) updateData.bio = bio;
+      if (isPublic !== undefined) updateData.isPublic = isPublic;
+      if (profilePhoto !== undefined) updateData.profilePhoto = profilePhoto;
+      if (name !== undefined) updateData.name = name;
+      
       // Handle experience years (convert from frontend format)
       if (experienceYears !== undefined) {
         updateData.experience_years = parseInt(experienceYears) || 0;
       }
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
 
       const updatedUser = await tx.user.update({
         where: { id: userId },

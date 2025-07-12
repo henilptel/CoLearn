@@ -198,7 +198,13 @@ exports.registerUser = async (req, res, next) => {
         for (const skillName of skillsOffered) {
           let skill = await tx.skill.findUnique({ where: { name: skillName } });
           if (!skill) {
-            skill = await tx.skill.create({ data: { name: skillName } });
+            skill = await tx.skill.create({ 
+              data: { 
+                name: skillName,
+                description: `Skill: ${skillName}`,
+                category: 'OTHER'
+              } 
+            });
           }
           await tx.user.update({
             where: { id: newUser.id },
@@ -216,7 +222,13 @@ exports.registerUser = async (req, res, next) => {
         for (const skillName of skillsWanted) {
           let skill = await tx.skill.findUnique({ where: { name: skillName } });
           if (!skill) {
-            skill = await tx.skill.create({ data: { name: skillName } });
+            skill = await tx.skill.create({ 
+              data: { 
+                name: skillName,
+                description: `Skill: ${skillName}`,
+                category: 'OTHER'
+              } 
+            });
           }
           await tx.user.update({
             where: { id: newUser.id },
@@ -234,7 +246,13 @@ exports.registerUser = async (req, res, next) => {
         for (const skillName of skillsInterested) {
           let skill = await tx.skill.findUnique({ where: { name: skillName } });
           if (!skill) {
-            skill = await tx.skill.create({ data: { name: skillName } });
+            skill = await tx.skill.create({ 
+              data: { 
+                name: skillName,
+                description: `Skill: ${skillName}`,
+                category: 'OTHER'
+              } 
+            });
           }
           await tx.user.update({
             where: { id: newUser.id },
