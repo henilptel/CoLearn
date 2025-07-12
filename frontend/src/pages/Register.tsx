@@ -36,17 +36,22 @@ const Register: React.FC = () => {
 
     try {
       const response = await userAPI.register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        role: 'member'
+        name: `${formData.firstName} ${formData.lastName}`,
+        isPublic: true,
+        agreeToTerms: true,
+        confirmPassword: formData.confirmPassword
       });
       
-      localStorage.setItem('token', response.token);
-      navigate('/register-bio');
+      if (response.data.message === "User registered successfully") {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        navigate('/register-bio');
+      } else {
+        throw new Error(response.data.message || 'Registration failed');
+      }
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      setError(err.response?.data?.message || err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
