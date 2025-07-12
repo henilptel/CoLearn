@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core User model
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique @db.VarChar(100)
+  name         String    @db.VarChar(100)
+  location     String?   @db.VarChar(255)
+  profilePhoto String?   @db.VarChar(500) // URL to profile photo
+  isPublic     Boolean   @default(true)   // Profile visibility
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  isActive     Boolean   @default(true)   // For soft deletion
+  
+  // Relations
+  skillsOffered  Skill[]      @relation("SkillsOffered")
+  skillsWanted   Skill[]      @relation("SkillsWanted")
+  swapRequests   SwapRequest[] @relation("SwapRequester")
+  swapReceived   SwapRequest[] @relation("SwapReceiver")
+  timeSlots      TimeSlot[]   // User's availability schedule
+  
+  @@map("users")
+}
+
+// Skills model - represents both offered and wanted skills
+model Skill {
+  id          String @id @default(uuid())
+  name        String @db.VarChar(100)
+  description String @db.Text
+  category    String @db.VarChar(50) // e.g., "Technology", "Design", "Language"
+  
+  // Relations
+  usersOffering User[] @relation("SkillsOffered")
+  usersWanting  User[] @relation("SkillsWanted")
+  
+  @@map("skills")
+}
+
+// Swap requests - core functionality for skill exchanges
+model SwapRequest {
+  id          String            @id @default(uuid())
+  requesterId String
+  receiverId  String
+  message     String?           @db.Text
+  status      SwapRequestStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  requester User @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("SwapReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@map("swap_requests")
+}
+
+// Enums
+enum SwapRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum Day {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+// Time slots for user availability - same logic as main project
+model TimeSlot {
+  id      String @id @default(uuid())
+  day     Day
+  from    String // Time in HH:MM format
+  to      String // Time in HH:MM format
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("time_slots")
+}
