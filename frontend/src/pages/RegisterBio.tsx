@@ -7,7 +7,7 @@ import * as yup from "yup"
 import CleanAuthSidebar from "../components/CleanAuthSidebar"
 import { userAPI } from "../apis/user"
 import useProfile from "../hooks/useProfile"
-import { useBioRegistration } from "../contexts/RegistrationContext"
+import { useBioRegistration, useRegistration } from "../contexts/RegistrationContext"
 
 interface BioForm {
   bio: string
@@ -18,6 +18,7 @@ interface BioForm {
 const RegisterBio: React.FC = () => {
   const prevForm = useLocation().state
   const { data: bioData, updateData } = useBioRegistration();
+  const { registrationData } = useRegistration();
   const { profile, loading: isProfileLoading } = useProfile()
   const navigate = useNavigate()
 
@@ -58,14 +59,26 @@ const RegisterBio: React.FC = () => {
       setSubmitting(true)
       setError("")
 
-      const profileData = {
-        ...prevForm,
+      // Since the user is already created in the first step, we need to update the profile
+      const profileUpdateData = {
+        // From user info step
+        location: values.location || registrationData.userInfo?.location,
+        
+        // From profession step
+        skillsOffered: registrationData.profession?.skillsOffered || [],
+        skillsWanted: [...(registrationData.profession?.skillsWanted || []), ...values.skillsInterested],
+        currentPost: registrationData.profession?.currentPost,
+        experienceYears: registrationData.profession?.experienceYears,
+        
+        // From bio step (current)
         bio: values.bio,
-        location: values.location,
-        skillsInterested: values.skillsInterested,
-      }
+        isPublic: true,
+      };
 
-      await userAPI.registerUser(profileData)
+      console.log('Updating user profile with:', profileUpdateData);
+      
+      // Use the profile update endpoint instead of register
+      await userAPI.updateProfile(profileUpdateData)
       
       // Save data to registration context
       updateData({
@@ -74,12 +87,13 @@ const RegisterBio: React.FC = () => {
         skillsInterested: values.skillsInterested,
       });
 
-      setSuccess("Profile created successfully! Redirecting to final step...")
+      setSuccess("Profile updated successfully! Redirecting to final step...")
       setTimeout(() => {
         navigate("/register/4")
       }, 1500)
     } catch (err: any) {
-      setError(err.message || "Failed to create profile. Please try again.")
+      console.error('Profile update error:', err);
+      setError(err.response?.data?.message || err.message || "Failed to update profile. Please try again.")
     } finally {
       setSubmitting(false)
     }
