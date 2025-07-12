@@ -231,13 +231,17 @@ const Register: React.FC = () => {
               </div>
 
               <div className="google-login-wrapper">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => setError('Google registration failed')}
-                  theme="outline"
-                  size="large"
-                  text="signup_with"
-                />
+                <button
+                  type="button"
+                  onClick={() => window.location.href = "http://localhost:5000/api/auth/google"}
+                  className="btn btn-outline-primary w-100"
+                  style={{ height: '48px' }}
+                >
+                  <div className="d-flex align-items-center justify-content-center">
+                    {/* Google SVG icon here */}
+                    Continue with Google
+                  </div>
+                </button>
               </div>
             </div>
 

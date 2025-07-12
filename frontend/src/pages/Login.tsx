@@ -75,7 +75,7 @@ const Login: React.FC = () => {
   };
 
   const handleGoogleLogin = () => {
-    console.log("Google login clicked");
+    window.location.href = "http://localhost:5000/api/auth/google";
   };
 
   return (
