@@ -168,33 +168,43 @@ const HomePage: React.FC = () => {
     const loadUsers = async () => {
       setLoading(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Load real users from API
+        const response = await userAPI.getAllUsers();
+        if (response.data.success) {
+          const realUsers = response.data.users.map((user: any) => ({
+            id: user.id,
+            firstName: user.name.split(' ')[0] || user.name,
+            lastName: user.name.split(' ').slice(1).join(' ') || '',
+            email: user.email || `${user.name.toLowerCase().replace(' ', '.')}@example.com`,
+            role: 'member',
+            name: user.name,
+            rating: user.rating || 0,
+            currentPost: user.currentPost || 'Skill Sharer',
+            noOfSessions: user.noOfSessions || 0,
+            noOfReviews: user.noOfReviews || 0,
+            experienceYears: user.experienceYears || 0,
+            experienceMonths: user.experienceMonths || 0,
+            creditScore: user.creditScore || 85,
+            skillsOffered: user.skillsOffered || [],
+            skillsWanted: user.skillsWanted || [],
+            location: user.location || 'Location not specified',
+            bio: user.bio || 'No bio available',
+            isPublicProfile: user.isPublicProfile !== false,
+            availability: user.availability || ['weekends']
+          }));
+          setUsers(realUsers);
+          setFilteredUsers(realUsers);
+        } else {
+          console.error('Failed to load users:', response.data.message);
+          // Fallback to mock data
+          setUsers(mockUsers);
+          setFilteredUsers(mockUsers);
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        // Fallback to mock data
         setUsers(mockUsers);
         setFilteredUsers(mockUsers);
-        
-        // setCurrentUser({
-        //   id: 'current',
-        //   firstName: 'You',
-        //   lastName: '',
-        //   email: 'you@example.com',
-        //   role: 'member',
-        //   name: 'You',
-        //   rating: 0,
-        //   currentPost: '',
-        //   noOfSessions: 0,
-        //   noOfReviews: 0,
-        //   experienceYears: 0,
-        //   experienceMonths: 0,
-        //   creditScore: 0,
-        //   skillsOffered: ['JavaScript', 'React'],
-        //   skillsWanted: ['Python', 'Machine Learning'],
-        //   location: '',
-        //   bio: '',
-        //   isPublicProfile: true,
-        //   availability: []
-        // });
-      } catch (error) {
-        console.error('Failed to load users:', error);
       } finally {
         setLoading(false);
       }

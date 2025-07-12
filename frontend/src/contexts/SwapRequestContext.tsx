@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { SwapRequest, Member } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import type { Member } from '../types';
+import type { SwapRequest } from '../types.ts';
+import { swapAPI } from '../apis/swap';
 
 interface SwapRequestContextType {
   requests: SwapRequest[];
@@ -30,17 +33,71 @@ export const SwapRequestProvider: React.FC<SwapRequestProviderProps> = ({ childr
   const [requests, setRequests] = useState<SwapRequest[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Load requests from localStorage on mount
+  // Load requests from API and localStorage on mount
   useEffect(() => {
-    const savedRequests = localStorage.getItem('swapRequests');
-    if (savedRequests) {
+    const loadRequests = async () => {
       try {
-        setRequests(JSON.parse(savedRequests));
+        setLoading(true);
+        
+        // Try to load from API first
+        const [sentResponse, receivedResponse] = await Promise.all([
+          swapAPI.getSentSwapRequests(),
+          swapAPI.getReceivedSwapRequests()
+        ]);
+        
+        const allRequests = [
+          ...sentResponse.data.map((req: any) => ({
+            id: req.id,
+            fromUserId: req.requesterId,
+            toUserId: req.receiverId,
+            fromUserName: req.requester?.name || 'Unknown',
+            toUserName: req.receiver?.name || 'Unknown',
+            offeredSkill: req.offeredSkill || 'Unknown Skill',
+            requestedSkill: req.requestedSkill || 'Unknown Skill',
+            message: req.message || '',
+            status: req.status?.toLowerCase() || 'pending',
+            createdAt: req.createdAt,
+            updatedAt: req.updatedAt,
+            fromUser: req.requester,
+            toUser: req.receiver
+          })),
+          ...receivedResponse.data.map((req: any) => ({
+            id: req.id,
+            fromUserId: req.requesterId,
+            toUserId: req.receiverId,
+            fromUserName: req.requester?.name || 'Unknown',
+            toUserName: req.receiver?.name || 'Unknown',
+            offeredSkill: req.offeredSkill || 'Unknown Skill',
+            requestedSkill: req.requestedSkill || 'Unknown Skill',
+            message: req.message || '',
+            status: req.status?.toLowerCase() || 'pending',
+            createdAt: req.createdAt,
+            updatedAt: req.updatedAt,
+            fromUser: req.requester,
+            toUser: req.receiver
+          }))
+        ];
+        
+        setRequests(allRequests);
       } catch (error) {
-        console.error('Error parsing saved requests:', error);
-        setRequests([]);
+        console.error('Failed to load requests from API, falling back to localStorage:', error);
+        
+        // Fallback to localStorage
+        const savedRequests = localStorage.getItem('swapRequests');
+        if (savedRequests) {
+          try {
+            setRequests(JSON.parse(savedRequests));
+          } catch (error) {
+            console.error('Error parsing saved requests:', error);
+            setRequests([]);
+          }
+        }
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    loadRequests();
   }, []);
 
   // Save requests to localStorage whenever requests change
@@ -51,26 +108,34 @@ export const SwapRequestProvider: React.FC<SwapRequestProviderProps> = ({ childr
   const sendRequest = async (fromUser: Member, toUser: Member, data: { offeredSkill: string; wantedSkill: string; message: string }) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const newRequest: SwapRequest = {
-        id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        fromUserId: fromUser.id,
-        toUserId: toUser.id,
-        fromUserName: fromUser.name,
-        toUserName: toUser.name,
+      // Call real API
+      const response = await swapAPI.createSwapRequest({
+        receiverId: toUser.id,
+        message: data.message,
         offeredSkill: data.offeredSkill,
         requestedSkill: data.wantedSkill,
-        message: data.message,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        fromUser,
-        toUser
-      };
+      });
+      
+      if (response.data.swapRequest) {
+        // Convert backend format to frontend format
+        const newRequest: SwapRequest = {
+          id: response.data.swapRequest.id,
+          fromUserId: fromUser.id,
+          toUserId: toUser.id,
+          fromUserName: fromUser.name,
+          toUserName: toUser.name,
+          offeredSkill: data.offeredSkill,
+          requestedSkill: data.wantedSkill,
+          message: data.message,
+          status: 'pending',
+          createdAt: response.data.swapRequest.createdAt || new Date().toISOString(),
+          updatedAt: response.data.swapRequest.updatedAt || new Date().toISOString(),
+          fromUser,
+          toUser
+        };
 
-      setRequests(prev => [...prev, newRequest]);
+        setRequests(prev => [...prev, newRequest]);
+      }
     } catch (error) {
       console.error('Error sending request:', error);
       throw error;
@@ -82,8 +147,8 @@ export const SwapRequestProvider: React.FC<SwapRequestProviderProps> = ({ childr
   const acceptRequest = async (requestId: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Call real API
+      await swapAPI.acceptSwapRequest(requestId);
       
       setRequests(prev => prev.map(req => 
         req.id === requestId 
@@ -101,8 +166,8 @@ export const SwapRequestProvider: React.FC<SwapRequestProviderProps> = ({ childr
   const rejectRequest = async (requestId: string) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Call real API
+      await swapAPI.rejectSwapRequest(requestId);
       
       setRequests(prev => prev.map(req => 
         req.id === requestId 

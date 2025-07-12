@@ -193,3 +193,179 @@ exports.getAllTags = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+// Get all users for browsing (only public profiles)
+exports.getAllUsers = async (req, res) => {
+  try {
+    const { limit = 20, offset = 0 } = req.query;
+    
+    const users = await prisma.user.findMany({
+      where: { 
+        isPublic: true,
+        isActive: true 
+      },
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        bio: true,
+        profilePhoto: true,
+        skillsOffered: {
+          select: {
+            name: true
+          }
+        },
+        skillsWanted: {
+          select: {
+            name: true
+          }
+        },
+        ratingsReceived: {
+          select: {
+            rating: true
+          }
+        },
+        createdAt: true
+      },
+      take: parseInt(limit),
+      skip: parseInt(offset),
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Calculate average ratings and format skills
+    const formattedUsers = users.map(user => {
+      const ratings = user.ratingsReceived.map(r => r.rating);
+      const averageRating = ratings.length > 0 
+        ? ratings.reduce((a, b) => a + b, 0) / ratings.length 
+        : 0;
+
+      return {
+        id: user.id,
+        name: user.name,
+        location: user.location,
+        bio: user.bio,
+        profilePhoto: user.profilePhoto,
+        skillsOffered: user.skillsOffered.map(s => s.name),
+        skillsWanted: user.skillsWanted.map(s => s.name),
+        rating: Math.round(averageRating * 10) / 10,
+        noOfReviews: ratings.length,
+        noOfSessions: 0, // TODO: Calculate from actual sessions
+        isPublicProfile: true
+      };
+    });
+
+    res.json({ 
+      success: true, 
+      users: formattedUsers,
+      total: formattedUsers.length 
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Search users by skills, name, or location
+exports.searchUsers = async (req, res) => {
+  try {
+    const { q, skill, location, limit = 20, offset = 0 } = req.query;
+    
+    let whereClause = {
+      isPublic: true,
+      isActive: true
+    };
+
+    if (q) {
+      whereClause.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { bio: { contains: q, mode: 'insensitive' } },
+        { location: { contains: q, mode: 'insensitive' } }
+      ];
+    }
+
+    if (skill) {
+      whereClause.OR = [
+        ...(whereClause.OR || []),
+        {
+          skillsOffered: {
+            some: {
+              name: { contains: skill, mode: 'insensitive' }
+            }
+          }
+        },
+        {
+          skillsWanted: {
+            some: {
+              name: { contains: skill, mode: 'insensitive' }
+            }
+          }
+        }
+      ];
+    }
+
+    if (location) {
+      whereClause.location = { contains: location, mode: 'insensitive' };
+    }
+
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        bio: true,
+        profilePhoto: true,
+        skillsOffered: {
+          select: {
+            name: true
+          }
+        },
+        skillsWanted: {
+          select: {
+            name: true
+          }
+        },
+        ratingsReceived: {
+          select: {
+            rating: true
+          }
+        }
+      },
+      take: parseInt(limit),
+      skip: parseInt(offset),
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Format users same as getAllUsers
+    const formattedUsers = users.map(user => {
+      const ratings = user.ratingsReceived.map(r => r.rating);
+      const averageRating = ratings.length > 0 
+        ? ratings.reduce((a, b) => a + b, 0) / ratings.length 
+        : 0;
+
+      return {
+        id: user.id,
+        name: user.name,
+        location: user.location,
+        bio: user.bio,
+        profilePhoto: user.profilePhoto,
+        skillsOffered: user.skillsOffered.map(s => s.name),
+        skillsWanted: user.skillsWanted.map(s => s.name),
+        rating: Math.round(averageRating * 10) / 10,
+        noOfReviews: ratings.length,
+        noOfSessions: 0,
+        isPublicProfile: true
+      };
+    });
+
+    res.json({ 
+      success: true, 
+      users: formattedUsers,
+      total: formattedUsers.length,
+      query: { q, skill, location }
+    });
+  } catch (error) {
+    console.error("Error searching users:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

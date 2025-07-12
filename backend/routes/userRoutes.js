@@ -13,6 +13,10 @@ const requireAuth = (req, res, next) => {
 // Tags routes
 router.get("/tags", userController.getAllTags);
 
+// User browsing routes
+router.get("/", userController.getAllUsers);
+router.get("/search", userController.searchUsers);
+
 // User profile routes
 router.get("/profile", requireAuth, userController.getUserProfile);
 router.put("/profile", requireAuth, userController.updateUserProfile);
