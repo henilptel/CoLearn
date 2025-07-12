@@ -118,6 +118,10 @@ function searchUsers(query: string): Promise<AxiosResponse<any>> {
   return axiosInstance.get(`/users/search?q=${encodeURIComponent(query)}`);
 }
 
+function getUserById(userId: string): Promise<AxiosResponse<any>> {
+  return axiosInstance.get(`/users/${userId}`);
+}
+
 // Create userAPI object for easier importing
 const userAPI = {
   login,
@@ -137,6 +141,7 @@ const userAPI = {
   checkAuthStatus,
   getAllUsers,
   searchUsers,
+  getUserById,
 };
 
 // Export individual functions (backward compatibility)
@@ -155,6 +160,7 @@ export {
   updateProfile,
   getUserInfo,
   checkAuthStatus,
+  getUserById,
 };
 
 // Export the userAPI object
