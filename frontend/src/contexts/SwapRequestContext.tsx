@@ -230,8 +230,7 @@ export const SwapRequestProvider: React.FC<SwapRequestProviderProps> = ({ childr
         toUser
       };
 
-        setRequests(prev => [...prev, newRequest]);
-      }
+      setRequests(prev => [...prev, newRequest]);
     } catch (error) {
       console.error('Error sending request:', error);
       throw error;

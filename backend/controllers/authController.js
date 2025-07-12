@@ -30,129 +30,7 @@ exports.register = async (req, res, next) => {
   }
 };
 
-exports.login = (req, res, next) => {
-  passport.authenticate("local", (err, user, info) => {
-    if (err) return next(err);
-    if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
-    req.logIn(user, (err) => {
-      if (err) return next(err);
-      const { password, ...userWithoutPassword } = user;
-      res.json({ message: "Logged in successfully", user: userWithoutPassword });
-    });
-  })(req, res, next);
-};
-
-exports.logout = (req, res) => {
-  req.logout(() => {
-    res.json({ message: "Logged out successfully" });
-  });
-};
-
-exports.checkAuth = (req, res) => {
-  if (req.isAuthenticated()) {
-    const { password, ...userWithoutPassword } = req.user;
-    res.json({ authenticated: true, user: userWithoutPassword });
-  } else {
-    res.json({ authenticated: false });
-  }
-};
-
-exports.googleRegister = async (req, res, next) => {
-  try {
-    const { credential } = req.body; // credential is the Google ID token from frontend
-
-    if (!credential) {
-      return res.status(400).json({ message: "Missing Google credential" });
-    }
-
-    // Verify Google ID token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
-
-    const email = payload.email;
-    const name = payload.name;
-    const profilePhoto = payload.picture;
-
-    // Find or create user
-    let user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email,
-          name,
-          profilePhoto,
-          isPublic: true,
-          password: "", // No password for Google users
-        },
-      });
-    }
-    // Remove password before sending user object
-    const { password, ...userWithoutPassword } = user;
-    res.status(201).json({ message: "Google registration successful", user: userWithoutPassword });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.googleCallback = async (req, res, next) => {
-  try {
-    const { code } = req.body;
-
-    if (!code) {
-      return res.status(400).json({ message: "Missing Google OAuth code" });
-    }
-
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_CALLBACK_URL
-    );
-
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-
-    const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
-    const { data } = await oauth2.userinfo.get();
-
-    const email = data.email;
-    const name = data.name;
-    const profilePhoto = data.picture;
-
-    let user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email,
-          name,
-          profilePhoto,
-          isPublic: true,
-          password: "",
-          googleAccessToken: tokens.access_token,
-          googleRefreshToken: tokens.refresh_token,
-          googleTokenExpiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-        },
-      });
-    } else {
-      user = await prisma.user.update({
-        where: { email },
-        data: {
-          googleAccessToken: tokens.access_token,
-          googleRefreshToken: tokens.refresh_token,
-          googleTokenExpiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-        },
-      });
-    }
-
-    const { password, ...userWithoutPassword } = user;
-    res.status(200).json({ message: "Google authentication successful", user: userWithoutPassword });
-  } catch (err) {
-    next(err);
-  }
-};
-
+// Add this new endpoint for complete registration
 exports.registerUser = async (req, res, next) => {
   try {
     const {
@@ -278,10 +156,139 @@ exports.registerUser = async (req, res, next) => {
     });
 
     const { password: pw, ...userWithoutPassword } = userWithRelations;
-    res.status(201).json({
-      message: "User registered successfully",
-      user: userWithoutPassword
+    
+    // Log the user in automatically
+    req.login(userWithoutPassword, (err) => {
+      if (err) {
+        console.error('Auto-login error:', err);
+        // Don't fail the registration if auto-login fails
+      }
+      res.status(201).json({ message: "User registered successfully", user: userWithoutPassword });
     });
+  } catch (err) {
+    console.error('Registration error:', err);
+    next(err);
+  }
+};
+
+exports.login = (req, res, next) => {
+  passport.authenticate("local", (err, user, info) => {
+    if (err) return next(err);
+    if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
+    req.logIn(user, (err) => {
+      if (err) return next(err);
+      const { password, ...userWithoutPassword } = user;
+      res.json({ message: "Logged in successfully", user: userWithoutPassword });
+    });
+  })(req, res, next);
+};
+
+exports.logout = (req, res) => {
+  req.logout(() => {
+    res.json({ message: "Logged out successfully" });
+  });
+};
+
+exports.checkAuth = (req, res) => {
+  if (req.isAuthenticated()) {
+    const { password, ...userWithoutPassword } = req.user;
+    res.json({ authenticated: true, user: userWithoutPassword });
+  } else {
+    res.json({ authenticated: false });
+  }
+};
+
+exports.googleRegister = async (req, res, next) => {
+  try {
+    const { credential } = req.body; // credential is the Google ID token from frontend
+
+    if (!credential) {
+      return res.status(400).json({ message: "Missing Google credential" });
+    }
+
+    // Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    const email = payload.email;
+    const name = payload.name;
+    const profilePhoto = payload.picture;
+
+    // Find or create user
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          profilePhoto,
+          isPublic: true,
+          password: "", // No password for Google users
+        },
+      });
+    }
+    // Remove password before sending user object
+    const { password, ...userWithoutPassword } = user;
+    res.status(201).json({ message: "Google registration successful", user: userWithoutPassword });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.googleCallback = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ message: "Missing Google OAuth code" });
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_CALLBACK_URL
+    );
+
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+    const { data } = await oauth2.userinfo.get();
+
+    const email = data.email;
+    const name = data.name;
+    const profilePhoto = data.picture;
+
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          profilePhoto,
+          isPublic: true,
+          password: "",
+          googleAccessToken: tokens.access_token,
+          googleRefreshToken: tokens.refresh_token,
+          googleTokenExpiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+        },
+      });
+    } else {
+      user = await prisma.user.update({
+        where: { email },
+        data: {
+          googleAccessToken: tokens.access_token,
+          googleRefreshToken: tokens.refresh_token,
+          googleTokenExpiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+        },
+      });
+    }
+
+    const { password, ...userWithoutPassword } = user;
+    res.status(200).json({ message: "Google authentication successful", user: userWithoutPassword });
   } catch (err) {
     next(err);
   }

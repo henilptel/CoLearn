@@ -3,10 +3,11 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { userAPI } from "../apis/user"
 import CleanAuthSidebar from "../components/CleanAuthSidebar"
-import { useProfessionRegistration } from "../contexts/RegistrationContext"
+import { useProfessionRegistration, useBasicRegistration } from "../contexts/RegistrationContext"
 
 const RegisterProfession: React.FC = () => {
   const { data: professionData, updateData } = useProfessionRegistration();
+  const { data: basicData } = useBasicRegistration();
   const [formData, setFormData] = useState({
     skillsOffered: professionData?.skillsOffered || [],
     skillsWanted: professionData?.skillsWanted || [],
@@ -51,21 +52,24 @@ const RegisterProfession: React.FC = () => {
       return
     }
 
+    if (formData.skillsWanted.length === 0) {
+      setError("Please add at least one skill you want to learn")
+      setLoading(false)
+      return
+    }
+
     try {
-      await userAPI.updateProfile({
-        skillsOffered: formData.skillsOffered,
-        skillsWanted: formData.skillsWanted,
-      })
-      
-      // Save data to registration context
+      // For registration flow, just save to context instead of API call
+      // The final API call will be made in the last step with all data
       updateData({
         skillsOffered: formData.skillsOffered,
         skillsWanted: formData.skillsWanted,
       });
       
+      // Navigate to next step without API call
       navigate("/register/3")
     } catch (err: any) {
-      setError(err.message || "Failed to update skills")
+      setError(err.message || "Failed to save skills")
     } finally {
       setLoading(false)
     }
