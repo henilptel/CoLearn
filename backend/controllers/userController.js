@@ -24,21 +24,53 @@ exports.getUserProfile = async (req, res, next) => {
 
 exports.updateUserProfile = async (req, res, next) => {
   try {
-    const { skillsOffered, skillsWanted, location, bio, isPublic, profilePhoto, ...otherData } = req.body;
+    const { 
+      skillsOffered, 
+      skillsWanted, 
+      location, 
+      bio, 
+      isPublic, 
+      profilePhoto, 
+      skillsInterested, 
+      timeSlots,
+      currentPost,
+      experienceYears,
+      experienceMonths,
+      name,
+      ...otherData 
+    } = req.body;
     const userId = req.user.id;
 
     // Start a transaction for complex updates
     const result = await prisma.$transaction(async (tx) => {
-      // Update basic user info
+      // Update basic user info with only valid fields
+      const updateData = {
+        location,
+        bio,
+        isPublic,
+        profilePhoto,
+      };
+
+      // Add name if provided
+      if (name) {
+        updateData.name = name;
+      }
+
+      // Handle experience years (convert from frontend format)
+      if (experienceYears !== undefined) {
+        updateData.experience_years = parseInt(experienceYears) || 0;
+      }
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
       const updatedUser = await tx.user.update({
         where: { id: userId },
-        data: {
-          ...otherData,
-          location,
-          bio,
-          isPublic,
-          profilePhoto,
-        },
+        data: updateData,
       });
 
       // Handle skills offered
@@ -114,6 +146,26 @@ exports.updateUserProfile = async (req, res, next) => {
               skillsWanted: {
                 connect: { id: skill.id },
               },
+            },
+          });
+        }
+      }
+
+      // Handle time slots
+      if (timeSlots && Array.isArray(timeSlots)) {
+        // First, delete existing time slots for this user
+        await tx.timeSlot.deleteMany({
+          where: { userId: userId },
+        });
+
+        // Create new time slots
+        for (const slot of timeSlots) {
+          await tx.timeSlot.create({
+            data: {
+              userId: userId,
+              day: slot.day,
+              from: slot.from,
+              to: slot.to,
             },
           });
         }
