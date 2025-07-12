@@ -49,12 +49,13 @@ const Login: React.FC = () => {
       
       const response = await userAPI.login(loginData);
       
-      if (response.data.success) {
+      if (response.data.message === "Logged in successfully") {
         setAlertType("success");
         setAlertMessage("Welcome back! Redirecting to your dashboard...");
         setShowAlert(true);
         
-        localStorage.setItem("token", response.data.token);
+        // Store user data instead of token since we're using session auth
+        localStorage.setItem("user", JSON.stringify(response.data.user));
         if (values.rememberMe) {
           localStorage.setItem("rememberMe", "true");
         }

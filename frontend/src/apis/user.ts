@@ -8,11 +8,11 @@ interface LoginUser {
 }
 
 interface RegisterUser {
-  firstName: string;
-  lastName: string;
   email: string;
   password: string;
   confirmPassword: string;
+  name: string;
+  isPublic: boolean;
   agreeToTerms: boolean;
 }
 
@@ -78,6 +78,10 @@ function googleCallback(body: GoogleCallbackBody): Promise<AxiosResponse<any>> {
   return axiosInstance.post(`/auth/google/callback`, body);
 }
 
+function googleRegister(credentialResponse: any): Promise<AxiosResponse<any>> {
+  return axiosInstance.post(`/auth/google/register`, credentialResponse);
+}
+
 function getUserInfo(params?: GetUserInfoParams): Promise<AxiosResponse<any>> {
   return axiosInstance.get(`/user`);
 }
@@ -103,6 +107,7 @@ const userAPI = {
   verificationEmailCallback,
   registerUser,
   googleCallback,
+  googleRegister,
   getUserInfo,
   getAllTags,
   getUserProfile,
@@ -118,6 +123,7 @@ export {
   verificationEmailCallback,
   registerUser,
   googleCallback,
+  googleRegister,
   getAllTags,
   getUserProfile,
   editUserProfile,

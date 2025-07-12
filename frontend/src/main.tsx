@@ -3,56 +3,24 @@ import { createRoot } from "react-dom/client";
 import App from "./pages/App";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/clean-community.scss";
+import "./styles/homepage.scss";
 import "./styles/style.css";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-// Import pages - keeping existing structure
-//import Upcoming from "./pages/Upcoming";
+// Import pages
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import RegisterUserInfo from "./pages/RegisterUserInfo";
 import RegisterProfession from "./pages/RegisterProfession";
 import RegisterBio from "./pages/RegisterBio";
 import RegisterTimeSlots from "./pages/RegisterTimeSlots";
-//import MenteeWelcome from "./pages/MenteeWelcome";
-//import MentorWelcome from "./pages/MentorWelcome";
-//import ExploreMentor from "./pages/ExloreMentors";
-//import VerifyEmailCallback from "./pages/VerifyEmailCallback";
-/*import UserInfo from "./components/UserInfo";
-import ProfileCard from "./components/ProfileCard";
-import MenteeProfile from "./pages/MenteeProfile";
-import MenteeExploring from "./pages/MenteeExploring";
-import Milestone from "./components/Milestones";
-import JobList from "./pages/Jobs";
-import Workshops from "./pages/Workshop";
-import JobDetails from "./pages/JobDetails";
-import SessionForm from "./pages/CreateSession_1";
-import SessionForm1 from "./pages/CreateSession2";
-import Meeting from "./pages/Meeting";
-import WorkshopDetails from "./pages/WorkshopDetails";
-import Sessions from "./pages/Sessions";
-import Dashboard from "./pages/Dashboard";
-import UserProfile from "./pages/UserProfile";
-import Chat from "./pages/Chat";
-import CreateJobs from "./pages/CreateJobs";
-import CreateWorkshop from "./pages/CreateWorkshop";
-import LandingPage from "./pages/LandingPage";
-import BookSession from "./pages/BookSession";
-import Error from "./pages/Error";
-import Community from "./pages/Community";
-import Question from "./pages/Question";
-import BlankPage from "./pages/blank";
-import AdminPage from "./pages/Admin";
-import Verification from "./pages/Verification";
-import UpdateTimeSlots from "./pages/UpdateTimeSlots";
-import Referrals from "./pages/Referrals";
-import ReferralRequests from "./pages/referral_request";
-import MentorStats from "./pages/MentorStats";*/
+import Homepage from "./pages/HomePage";
 
 // Import types
 import type { Member, EventDetails } from "./types";
+import UserProfile from "./pages/UserProfile";
 
 // Mock data for skill swap platform
 const eventdetails: EventDetails = {
@@ -177,26 +145,15 @@ const members: Member[] = [
   },
 ];
 
-const events: EventDetails[] = Array(6).fill(eventdetails);
-
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
-    //errorElement: <Error />,
     children: [
-     /* {
+      {
         path: "/",
-        element: <LandingPage />,
+        element: <Homepage />
       },
-      {
-        path: "admin",
-        element: <AdminPage />
-      },
-      {
-        path: "upcoming",
-        element: <Upcoming />,
-      },*/
       {
         path: "register",
         element: <Register />,
@@ -221,140 +178,16 @@ const router = createBrowserRouter([
         path: "register/4",
         element: <RegisterTimeSlots />,
       },
-      /*{
-        path: "dashboard",
-        element: <MenteeWelcome mentors_={members} events_={events} />,
+      {
+        path: "homepage",
+        element: <Homepage/>
       },
       {
-        path: "mentee_welcome",
-        element: <MenteeWelcome mentors_={members} events_={events} />,
-      },
-      {
-        path: "mentor_welcome",
-        element: <MentorWelcome events_={events} />,
-      },
-      {
-        path: "explore",
-        element: <ExploreMentor mentors_={members} demoTags={demoTags} />,
-      },
-      {
-        path: "verify/callback",
-        element: <VerifyEmailCallback />,
-      },
-      {
-        path: "mentee_profile/:menteeId",
-        element: <MenteeProfile />,
-      },
-      {
-        path: "profilecard",
-        element: <ProfileCard />,
-      },
-      {
-        path: "mentee_exploring/:mentorId",
-        element: <MenteeExploring />,
-      },
-      {
-        path: "milestone",
-        element: <Milestone />,
-      },
-      {
-        path: "jobs",
-        element: <JobList />,
-      },
-      {
-        path: "jobs/:jobId",
-        element: <JobDetails />,
-      },
-      {
-        path: "workshops",
-        element: <Workshops demoTags={demoTags} />,
-      },
-      {
-        path: "workshops/:workshopId",
-        element: <WorkshopDetails />,
-      },
-      {
-        path: "createsession_1",
-        element: <SessionForm />,
-      },
-      {
-        path: "createsession_2",
-        element: <SessionForm1 />,
-      },
-      {
-        path: "meeting",
-        element: <Meeting />,
-      },
-      {
-        path: "meeting/:meetingId",
-        element: <Meeting />
-      },
-      {
-        path: "sessions",
-        element: <Sessions />
-      },
-      {
-        path: "user_profile",
-        element: <UserProfile _isEditing={false} />,
-      },
-      {
-        path: "edit_profile",
-        element: <UserProfile _isEditing={true} />,
-      },
-      {
-        path: "chat",
-        element: <Chat />
-      },
-      {
-        path: "create_job",
-        element: <CreateJobs />
-      },
-      {
-        path: "create_workshop",
-        element: <CreateWorkshop />
-      },
-      {
-        path: "book_session/:availableSessionId",
-        element: <BookSession />
-      },
-      {
-        path: "community",
-        element: <Community />
-      },
-      {
-        path: "community/:questionId",
-        element: <Question />
-      },
-      {
-        path: "landing_page",
-        element: <LandingPage />
-      },
-      {
-        path: "verification",
-        element: <Verification />
-      },
-      {
-        path: "update_slots",
-        element: <UpdateTimeSlots />
-      },
-      {
-        path: "referrals",
-        element: <Referrals />
-      },
-      {
-        path: "referral_request",
-        element: <ReferralRequests />,
-      },
-      {
-        path: "mentorstats",
-        element: <MentorStats />,
-      },*/
+        path: "profile/:userId",
+        element: <UserProfile/>
+      }
     ],
   },
-  /*{
-    path: "/landing-page",
-    element: <LandingPage />,
-  }*/
 ]);
 
 createRoot(document.getElementById("root")!).render(
