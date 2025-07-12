@@ -1,26 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../contexts/UserContext';
+import { useSwapRequests } from '../contexts/SwapRequestContext';
 import { userAPI } from '../apis/user';
+import SwapRequestModal from '../components/SwapRequestModal';
 import type { Member } from '../types';
 
 interface Filters {
-  search: string;
+  skill: string;
+  location: string;
   availability: string;
 }
 
 const HomePage: React.FC = () => {
+  const { currentUser } = useUser();
+  const { requests } = useSwapRequests();
+  const navigate = useNavigate();
+    const { sendRequest } = useSwapRequests();
+  
   const [users, setUsers] = useState<Member[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<Member[]>([]);
   const [filters, setFilters] = useState<Filters>({
-    search: '',
+    skill: '',
+    location: '',
     availability: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<Member | null>(null);
-  const navigate = useNavigate();
+  
+  // Add modal state
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Member | null>(null);
 
   const usersPerPage = 5;
+   const handleSwapRequestSubmit = async (requestData: any) => {
+    if (!currentUser || !selectedUser) return;
+    
+    try {
+      await sendRequest(currentUser, selectedUser, requestData);
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'profile-notification success';
+      notification.textContent = `Swap request sent to ${selectedUser.name} successfully!`;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 4000);
+    } catch (error) {
+      alert('Failed to send swap request. Please try again.');
+    }
+  };
 
   // Mock data from your main.tsx
   const mockUsers: Member[] = [
@@ -139,27 +172,27 @@ const HomePage: React.FC = () => {
         setUsers(mockUsers);
         setFilteredUsers(mockUsers);
         
-        setCurrentUser({
-          id: 'current',
-          firstName: 'You',
-          lastName: '',
-          email: 'you@example.com',
-          role: 'member',
-          name: 'You',
-          rating: 0,
-          currentPost: '',
-          noOfSessions: 0,
-          noOfReviews: 0,
-          experienceYears: 0,
-          experienceMonths: 0,
-          creditScore: 0,
-          skillsOffered: ['JavaScript', 'React'],
-          skillsWanted: ['Python', 'Machine Learning'],
-          location: '',
-          bio: '',
-          isPublicProfile: true,
-          availability: []
-        });
+        // setCurrentUser({
+        //   id: 'current',
+        //   firstName: 'You',
+        //   lastName: '',
+        //   email: 'you@example.com',
+        //   role: 'member',
+        //   name: 'You',
+        //   rating: 0,
+        //   currentPost: '',
+        //   noOfSessions: 0,
+        //   noOfReviews: 0,
+        //   experienceYears: 0,
+        //   experienceMonths: 0,
+        //   creditScore: 0,
+        //   skillsOffered: ['JavaScript', 'React'],
+        //   skillsWanted: ['Python', 'Machine Learning'],
+        //   location: '',
+        //   bio: '',
+        //   isPublicProfile: true,
+        //   availability: []
+        // });
       } catch (error) {
         console.error('Failed to load users:', error);
       } finally {
@@ -175,8 +208,8 @@ const HomePage: React.FC = () => {
     let filtered = users;
 
     // Search filter - searches across multiple fields
-    if (filters.search.trim()) {
-      const searchTerm = filters.search.toLowerCase().trim();
+    if (filters.skill.trim()) {
+      const searchTerm = filters.skill.toLowerCase().trim();
       filtered = filtered.filter(user => {
         // Search in name
         const nameMatch = user.name.toLowerCase().includes(searchTerm);
@@ -232,46 +265,43 @@ const HomePage: React.FC = () => {
 
   const clearSearch = () => {
     setFilters({
-      search: '',
+      skill: '',
+      location: '',
       availability: ''
     });
   };
 
   const handleSendSwapRequest = (userId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('Sending swap request to user:', userId);
-    // Show success message or modal
-  };
-
-  const handleViewProfile = (userId: string) => {
-    navigate(`/profile/${userId}`);
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
-  const getRatingStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
     
-    for (let i = 0; i < fullStars; i++) {
-      stars.push('★');
+    if (!currentUser) {
+      alert('Please log in to send swap requests');
+      return;
     }
-    if (hasHalfStar) {
-      stars.push('☆');
+
+    const targetUser = users.find(u => u.id === userId);
+    if (!targetUser) {
+      alert('User not found');
+      return;
     }
-    while (stars.length < 5) {
-      stars.push('☆');
+
+    // Check if user has skills to offer
+    if (!currentUser.skillsOffered || currentUser.skillsOffered.length === 0) {
+      alert('Please add skills to your profile before sending swap requests');
+      return;
     }
-    return stars.join('');
+
+    // Check if target user has skills to offer
+    if (!targetUser.skillsOffered || targetUser.skillsOffered.length === 0) {
+      alert('This user has no skills listed to learn from');
+      return;
+    }
+
+    setSelectedUser(targetUser);
+    setIsSwapModalOpen(true);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
+ 
 
   // Pagination
   const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
@@ -283,6 +313,11 @@ const HomePage: React.FC = () => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Calculate pending requests count
+  const pendingRequestsCount = requests.filter(
+    req => req.toUserId === currentUser?.id && req.status === 'pending'
+  ).length;
 
   if (loading) {
     return (
@@ -297,23 +332,66 @@ const HomePage: React.FC = () => {
   return (
     <div className="homepage">
       {/* Header */}
+    
+
       <header className="homepage-header">
         <nav className="homepage-nav">
           <Link to="/" className="homepage-logo">
             <span className="homepage-logo-icon">🤗</span>
-            Skill Swap Platform
+            CoLearn
           </Link>
           
+          {/* Remove the navigation links section since we moved notification to user menu */}
+          
           <div className="homepage-user-menu">
-            <Link to="/profile" className="homepage-user-avatar">
-              {currentUser ? getInitials(currentUser.name) : 'U'}
-            </Link>
+            {/* Notification icon moved here, next to profile */}
             <button 
-              onClick={handleLogout}
-              className="homepage-search-btn"
-              style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+              onClick={() => navigate('/requests')} 
+              className="homepage-notification-btn"
+              title="Notifications"
             >
-              Login
+              <svg 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+                className="notification-icon"
+              >
+                <path 
+                  d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+                <path 
+                  d="M13.73 21a2 2 0 0 1-3.46 0" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
+              </svg>
+              {pendingRequestsCount > 0 && (
+                <span className="notification-badge">
+                  {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                </span>
+              )}
+            </button>
+            
+            <Link to="/my-profile" className="homepage-user-avatar">
+              {currentUser ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+            </Link>
+            
+            <button 
+              onClick={() => {
+                localStorage.removeItem('token');
+                navigate('/login');
+              }}
+              className="homepage-logout-btn"
+            >
+              Logout
             </button>
           </div>
         </nav>
@@ -327,13 +405,13 @@ const HomePage: React.FC = () => {
               type="text"
               className="homepage-search-input"
               placeholder="Search by name, skills, location, or job title..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
+              value={filters.skill}
+              onChange={(e) => handleFilterChange('skill', e.target.value)}
             />
             <button type="submit" className="homepage-search-btn">
               Search
             </button>
-            {filters.search && (
+            {filters.skill && (
               <button 
                 type="button" 
                 onClick={clearSearch}
@@ -377,7 +455,7 @@ const HomePage: React.FC = () => {
                 : `Found ${filteredUsers.length} of ${users.length} members`
               }
             </span>
-            {(filters.search || filters.availability) && (
+            {(filters.skill || filters.availability) && (
               <button 
                 onClick={clearSearch}
                 style={{
@@ -401,18 +479,18 @@ const HomePage: React.FC = () => {
             <div className="homepage-empty">
               <div className="homepage-empty-icon">🔍</div>
               <h3 className="homepage-empty-title">
-                {filteredUsers.length === 0 && (filters.search || filters.availability)
+                {filteredUsers.length === 0 && (filters.skill || filters.availability)
                   ? 'No matches found'
                   : 'No users found'
                 }
               </h3>
               <p className="homepage-empty-subtitle">
-                {filteredUsers.length === 0 && (filters.search || filters.availability)
+                {filteredUsers.length === 0 && (filters.skill || filters.availability)
                   ? 'Try adjusting your search terms or filters'
                   : 'Check back later for new members'
                 }
               </p>
-              {(filters.search || filters.availability) && (
+              {(filters.skill || filters.availability) && (
                 <button 
                   onClick={clearSearch}
                   className="homepage-search-btn"
@@ -428,10 +506,10 @@ const HomePage: React.FC = () => {
                 <div 
                   key={user.id} 
                   className="user-card"
-                  onClick={() => handleViewProfile(user.id)}
+                  onClick={() => navigate(`/profile/${user.id}`)}
                 >
                   <div className="user-card-avatar">
-                    {getInitials(user.name)}
+                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </div>
                   
                   <div className="user-card-content">
@@ -448,7 +526,11 @@ const HomePage: React.FC = () => {
                       </div>
                       <div className="user-card-rating">
                         <span className="user-card-rating-stars">
-                          {getRatingStars(user.rating)}
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <span key={i} className={`star ${user.rating > i ? 'filled' : ''}`}>
+                              ★
+                            </span>
+                          ))}
                         </span>
                         <span className="user-card-rating-text">
                           {user.rating}/5
@@ -502,7 +584,7 @@ const HomePage: React.FC = () => {
                       className="user-card-btn user-card-btn-secondary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleViewProfile(user.id);
+                        navigate(`/profile/${user.id}`);
                       }}
                     >
                       View Profile
@@ -545,6 +627,20 @@ const HomePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Swap Request Modal */}
+      {selectedUser && currentUser && (
+        <SwapRequestModal
+          isOpen={isSwapModalOpen}
+          onClose={() => {
+            setIsSwapModalOpen(false);
+            setSelectedUser(null);
+          }}
+          onSubmit={handleSwapRequestSubmit}
+          currentUser={currentUser}
+          targetUser={selectedUser}
+        />
+      )}
     </div>
   );
 };

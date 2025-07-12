@@ -8,6 +8,9 @@ import "./styles/style.css";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { UserProvider } from "./contexts/UserContext";
+import { SwapRequestProvider } from "./contexts/SwapRequestContext";
+import SwapRequests from "./pages/SwapRequests";
 
 // Import pages
 import Register from "./pages/Register";
@@ -183,8 +186,20 @@ const router = createBrowserRouter([
         element: <Homepage/>
       },
       {
+        path: "profile",
+        element: <UserProfile/>
+      },
+      {
+        path: "my-profile",
+        element: <UserProfile/>
+      },
+      {
         path: "profile/:userId",
         element: <UserProfile/>
+      },
+       {
+        path: "requests",
+        element: <SwapRequests/>
       }
     ],
   },
@@ -193,7 +208,11 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
-      <RouterProvider router={router} />
+      <UserProvider>
+        <SwapRequestProvider>
+          <RouterProvider router={router} />
+        </SwapRequestProvider>
+      </UserProvider>
     </GoogleOAuthProvider>
   </StrictMode>
 );

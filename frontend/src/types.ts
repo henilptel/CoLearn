@@ -18,6 +18,7 @@ export interface Member {
   bio: string;
   isPublicProfile: boolean;
   availability: string[];
+  timeSlots?: { day: string; slots: string[] }[];
 }
 
 export interface EventDetails {
@@ -25,4 +26,26 @@ export interface EventDetails {
   desc: string;
   date: string;
   time: string;
+}
+
+export interface SwapRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  fromUserName: string;
+  toUserName: string;
+  offeredSkill: string;
+  requestedSkill: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  fromUser: Member;
+  toUser: Member;
+}
+
+export interface SwapRequestData {
+  offeredSkill: string;
+  wantedSkill: string;
+  message: string;
 }
