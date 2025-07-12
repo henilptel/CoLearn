@@ -1,10 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { userAPI } from '../apis/user';
 import type { Member } from '../types';
 
 interface UserContextType {
   currentUser: Member | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
   updateCurrentUser: (user: Member) => void;
   setCurrentUser: (user: Member | null) => void;
+  checkAuthStatus: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -23,74 +29,99 @@ interface UserProviderProps {
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUserState] = useState<Member | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Initialize user from localStorage or use default
-  useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      try {
-        setCurrentUserState(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-        // Set default user if parsing fails
-        setDefaultUser();
+  // Check authentication status with backend session
+  const checkAuthStatus = async () => {
+    try {
+      setIsLoading(true);
+      const response = await userAPI.checkAuthStatus();
+      
+      if (response.data.authenticated && response.data.user) {
+        const user = response.data.user;
+        setCurrentUserState(user);
+        setIsAuthenticated(true);
+        
+        // Sync with localStorage
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('isAuthenticated', 'true');
+      } else {
+        // Not authenticated
+        setCurrentUserState(null);
+        setIsAuthenticated(false);
+        
+        // Clear localStorage
+        localStorage.removeItem('user');
+        localStorage.removeItem('isAuthenticated');
       }
-    } else {
-      setDefaultUser();
+    } catch (error) {
+      console.error('Auth status check failed:', error);
+      setCurrentUserState(null);
+      setIsAuthenticated(false);
+      
+      // Clear localStorage on error
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // Initialize authentication state
+  useEffect(() => {
+    checkAuthStatus();
   }, []);
 
-  const setDefaultUser = () => {
-    const defaultUser: Member = {
-      id: "current",
-      firstName: "John",
-      lastName: "Doe",
-      email: "john.doe@example.com",
-      role: "member",
-      name: "John Doe",
-      rating: 4.5,
-      currentPost: "Full Stack Developer & Tech Enthusiast",
-      noOfSessions: 12,
-      noOfReviews: 5,
-      experienceYears: 5,
-      experienceMonths: 8,
-      creditScore: 85,
-      skillsOffered: ["JavaScript", "React", "Node.js", "Python"],
-      skillsWanted: ["Machine Learning", "UI/UX Design", "Data Science"],
-      location: "San Francisco, CA",
-      bio: "Passionate about creating amazing web experiences and always eager to learn new technologies. Love to share knowledge and help others grow in their coding journey!",
-      isPublicProfile: true,
-      availability: ["weekends", "evenings"],
-      timeSlots: [
-        { day: "Monday", slots: [] },
-        { day: "Tuesday", slots: [] },
-        { day: "Wednesday", slots: [] },
-        { day: "Thursday", slots: [] },
-        { day: "Friday", slots: [] },
-        { day: "Saturday", slots: ["09:00", "10:00", "14:00", "15:00"] },
-        { day: "Sunday", slots: ["09:00", "10:00", "14:00", "15:00"] }
-      ]
-    };
-    setCurrentUserState(defaultUser);
-    localStorage.setItem('currentUser', JSON.stringify(defaultUser));
+  // Logout function
+  const logout = async () => {
+    try {
+      await userAPI.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setCurrentUserState(null);
+      setIsAuthenticated(false);
+      
+      // Clear localStorage
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('registrationData');
+    }
   };
 
   const updateCurrentUser = (user: Member) => {
     setCurrentUserState(user);
-    localStorage.setItem('currentUser', JSON.stringify(user));
+    setIsAuthenticated(true);
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('isAuthenticated', 'true');
   };
 
   const setCurrentUser = (user: Member | null) => {
     setCurrentUserState(user);
+    setIsAuthenticated(!!user);
+    
     if (user) {
-      localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('isAuthenticated', 'true');
     } else {
-      localStorage.removeItem('currentUser');
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
     }
   };
 
+  const value: UserContextType = {
+    currentUser,
+    isAuthenticated,
+    isLoading,
+    updateCurrentUser,
+    setCurrentUser,
+    checkAuthStatus,
+    logout,
+  };
+
   return (
-    <UserContext.Provider value={{ currentUser, updateCurrentUser, setCurrentUser }}>
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );

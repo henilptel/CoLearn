@@ -102,6 +102,10 @@ function updateProfile(data: Partial<UserProfile>): Promise<AxiosResponse<any>> 
   return axiosInstance.put("/users/profile", data);
 }
 
+function checkAuthStatus(): Promise<AxiosResponse<any>> {
+  return axiosInstance.get("/auth/status");
+}
+
 // Create userAPI object for easier importing
 const userAPI = {
   login,
@@ -117,6 +121,7 @@ const userAPI = {
   getUserProfile,
   editUserProfile,
   updateProfile,
+  checkAuthStatus,
 };
 
 // Export individual functions (backward compatibility)
@@ -134,6 +139,7 @@ export {
   editUserProfile,
   updateProfile,
   getUserInfo,
+  checkAuthStatus,
 };
 
 // Export the userAPI object
