@@ -5,8 +5,8 @@ const prisma = require("../models/prismaClient");
 exports.register = async (req, res, next) => {
   try {
     const { email, password, name, location, profilePhoto, isPublic } = req.body;
-    if (!email || !password || !name || !isPublic) {
-      return res.status(400).json({ message: "Email, password, name and Profile View status are required." });
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: "Email, password, and name are required." });
     }
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -20,7 +20,7 @@ exports.register = async (req, res, next) => {
         name,
         location,
         profilePhoto,
-        isPublic,
+        isPublic: isPublic !== undefined ? isPublic : true,
       },
     });
     const { password: pw, ...userWithoutPassword } = user;
@@ -55,5 +55,25 @@ exports.checkAuth = (req, res) => {
     res.json({ authenticated: true, user: userWithoutPassword });
   } else {
     res.json({ authenticated: false });
+  }
+};
+
+exports.googleRegister = async (req, res, next) => {
+  try {
+    // This is a placeholder for Google registration
+    // You would need to implement Google OAuth verification here
+    res.status(501).json({ message: "Google registration not implemented yet" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.googleCallback = async (req, res, next) => {
+  try {
+    // This is a placeholder for Google callback
+    // You would need to implement Google OAuth verification here
+    res.status(501).json({ message: "Google callback not implemented yet" });
+  } catch (err) {
+    next(err);
   }
 };

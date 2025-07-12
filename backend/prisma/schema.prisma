@@ -18,6 +18,9 @@ model User {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   isActive        Boolean       @default(true)
+  googleAccessToken     String?   @db.Text
+  googleRefreshToken    String?   @db.Text
+  googleTokenExpiryDate DateTime?
   ratingsGiven    Rating[]      @relation("RatingGiver")
   ratingsReceived Rating[]      @relation("RatingReceiver")
   swapReceived    SwapRequest[] @relation("SwapReceiver")
