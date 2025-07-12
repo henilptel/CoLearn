@@ -7,79 +7,89 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Core User model - the foundation of our skill swap platform
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique @db.VarChar(100)
-  name         String    @db.VarChar(100)
-  location     String?   @db.VarChar(255)
-  profilePhoto String?   @db.VarChar(500) // URL to profile photo
-  isPublic     Boolean   @default(true)   // Profile visibility
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  isActive     Boolean   @default(true)   // For soft deletion
-  
-  // Relations
-  skillsOffered  Skill[]      @relation("SkillsOffered")
-  skillsWanted   Skill[]      @relation("SkillsWanted")
-  swapRequests   SwapRequest[] @relation("SwapRequester")
-  swapReceived   SwapRequest[] @relation("SwapReceiver")
-  ratingsGiven   Rating[]     @relation("RatingGiver")
-  ratingsReceived Rating[]    @relation("RatingReceiver")
-  timeSlots      TimeSlot[]   // User's availability schedule
-  
+  id              String        @id @default(uuid())
+  email           String        @unique @db.VarChar(100)
+  password        String        @db.VarChar(255)
+  name            String        @db.VarChar(100)
+  location        String?       @db.VarChar(255)
+  profilePhoto    String?       @db.VarChar(500)
+  isPublic        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  isActive        Boolean       @default(true)
+  ratingsGiven    Rating[]      @relation("RatingGiver")
+  ratingsReceived Rating[]      @relation("RatingReceiver")
+  swapReceived    SwapRequest[] @relation("SwapReceiver")
+  swapRequests    SwapRequest[] @relation("SwapRequester")
+  timeSlots       TimeSlot[]
+  skillsOffered   Skill[]       @relation("SkillsOffered")
+  skillsWanted    Skill[]       @relation("SkillsWanted")
+
   @@map("users")
 }
 
-// Skills model - represents both offered and wanted skills
 model Skill {
-  id          String        @id @default(uuid())
-  name        String        @db.VarChar(100)
-  description String        @db.Text
-  category    SkillCategory // Using enum for consistent categories
-  
-  // Relations
-  usersOffering User[] @relation("SkillsOffered")
-  usersWanting  User[] @relation("SkillsWanted")
-  
+  id            String        @id @default(uuid())
+  name          String        @db.VarChar(100)
+  description   String
+  category      SkillCategory
+  usersOffering User[]        @relation("SkillsOffered")
+  usersWanting  User[]        @relation("SkillsWanted")
+
   @@map("skills")
 }
 
-// Swap requests - core functionality for skill exchanges
 model SwapRequest {
   id          String            @id @default(uuid())
   requesterId String
   receiverId  String
-  message     String?           @db.Text
+  message     String?
   status      SwapRequestStatus @default(PENDING)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
-  
-  // Relations
-  requester User @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  receiver  User @relation("SwapReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  
+  receiver    User              @relation("SwapReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  requester   User              @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+
   @@map("swap_requests")
 }
 
-// Ratings and feedback system
 model Rating {
-  id         String @id @default(uuid())
-  rating     Int    @db.SmallInt // 1-5 scale
-  feedback   String @db.Text
+  id         String   @id @default(uuid())
+  rating     Int      @db.SmallInt
+  feedback   String
   giverId    String
   receiverId String
   createdAt  DateTime @default(now())
-  
-  // Relations
-  giver    User @relation("RatingGiver", fields: [giverId], references: [id], onDelete: Cascade)
-  receiver User @relation("RatingReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  
-  @@unique([giverId, receiverId]) // One rating per user pair
+  giver      User     @relation("RatingGiver", fields: [giverId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("RatingReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([giverId, receiverId])
   @@map("ratings")
 }
 
-// Enums
+model TimeSlot {
+  id     String @id @default(uuid())
+  day    Day
+  from   String
+  to     String
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("time_slots")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  sid       String   @unique @db.VarChar(255)
+  data      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
+
 enum SwapRequestStatus {
   PENDING
   ACCEPTED
@@ -99,43 +109,20 @@ enum Day {
 }
 
 enum SkillCategory {
-  TECHNOLOGY           // Programming, Web Dev, Software, etc.
-  DESIGN               // Graphic Design, UI/UX, Art, etc.
-  LANGUAGE             // English, Spanish, French, etc.
-  MUSIC                // Piano, Guitar, Singing, etc.
-  BUSINESS             // Marketing, Sales, Finance, etc.
-  COOKING              // Baking, Regional Cuisines, etc.
-  FITNESS              // Yoga, Personal Training, etc.
-  CRAFTS               // Knitting, Woodworking, etc.
-  PHOTOGRAPHY          // Portrait, Landscape, Editing, etc.
-  WRITING              // Content Writing, Creative Writing, etc.
-  TUTORING             // Math, Science, Academic subjects, etc.
-  LIFESTYLE            // Organization, Time Management, etc.
-  AUTOMOTIVE           // Car Repair, Maintenance, etc.
-  HOME_IMPROVEMENT     // Plumbing, Electrical, etc.
-  GARDENING            // Indoor Plants, Landscaping, etc.
-  OTHER                // For skills not fitting other categories
-}
-
-// Time slots for user availability - same logic as main project
-model TimeSlot {
-  id      String @id @default(uuid())
-  day     Day
-  from    String // Time in HH:MM format
-  to      String // Time in HH:MM format
-  userId  String
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("time_slots")
-}
-
-model Session {
-  id        String   @id @default(uuid())
-  sid       String   @unique @db.VarChar(255) 
-  data      String   @db.Text
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("sessions")
+  TECHNOLOGY
+  DESIGN
+  LANGUAGE
+  MUSIC
+  BUSINESS
+  COOKING
+  FITNESS
+  CRAFTS
+  PHOTOGRAPHY
+  WRITING
+  TUTORING
+  LIFESTYLE
+  AUTOMOTIVE
+  HOME_IMPROVEMENT
+  GARDENING
+  OTHER
 }
