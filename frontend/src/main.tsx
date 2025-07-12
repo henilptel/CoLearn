@@ -20,6 +20,7 @@ import RegisterProfession from "./pages/RegisterProfession";
 import RegisterBio from "./pages/RegisterBio";
 import RegisterTimeSlots from "./pages/RegisterTimeSlots";
 import Homepage from "./pages/HomePage";
+import Meeting from "./components/Meeting";
 
 // Import types
 import type { Member, EventDetails } from "./types";
@@ -200,6 +201,10 @@ const router = createBrowserRouter([
        {
         path: "requests",
         element: <SwapRequests/>
+      },
+       {
+        path: "meeting",
+        element: <Meeting/>
       }
     ],
   },

@@ -325,4 +325,36 @@ export interface SelectProps {
   className?: string;
 }
 
+export interface SwapRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  fromUserName: string;
+  toUserName: string;
+  offeredSkill: string;
+  requestedSkill: string;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  fromUser: Member;
+  toUser: Member;
+  // Add video call fields
+  roomId?: string;
+  meetingToken?: string;
+  meetingStartTime?: string;
+  meetingEndTime?: string;
+}
+
+export interface VideoCallSession {
+  id: string;
+  requestId: string;
+  roomId: string;
+  token: string;
+  participants: string[];
+  startTime: string;
+  endTime?: string;
+  isActive: boolean;
+}
+
 // Make sure we don't have conflicting exports
