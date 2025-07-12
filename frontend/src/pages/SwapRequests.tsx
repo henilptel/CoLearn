@@ -11,10 +11,50 @@ const SwapRequests: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const { createVideoCall } = useSwapRequests();
 
-  // Filter requests based on current user
-  const sentRequests = requests.filter(req => req.fromUserId === currentUser?.id);
-  const receivedRequests = requests.filter(req => req.toUserId === currentUser?.id);
+  // Debug logging
+  useEffect(() => {
+    console.log('Current user:', currentUser);
+    console.log('All requests:', requests);
+    console.log('Current user ID:', currentUser?.id);
+    console.log('LocalStorage requests:', JSON.parse(localStorage.getItem('swapRequests') || '[]'));
+  }, [currentUser, requests]);
+
+  const handleStartVideoCall = async (request: SwapRequest) => {
+    try {
+      const { roomId, token } = await createVideoCall(request.id);
+      
+      // Navigate to meeting
+      navigate('/meeting', {
+        state: {
+          roomId,
+          token,
+          participantName: currentUser?.name,
+          requestId: request.id
+        }
+      });
+    } catch (error) {
+      alert('Failed to start video call. Please try again.');
+    }
+  };
+
+  // Filter requests based on current user - use hardcoded demo user ID
+  const actualUserId = 'demo_current_user'; // Fixed for demo
+  console.log('Using demo user ID:', actualUserId);
+  
+  const sentRequests = requests.filter(req => {
+    console.log('Checking sent request:', req.id, 'fromUserId:', req.fromUserId, 'actualUserId:', actualUserId);
+    return req.fromUserId === actualUserId;
+  });
+  
+  const receivedRequests = requests.filter(req => {
+    console.log('Checking received request:', req.id, 'toUserId:', req.toUserId, 'actualUserId:', actualUserId);
+    return req.toUserId === actualUserId;
+  });
+
+  console.log('Sent requests:', sentRequests);
+  console.log('Received requests:', receivedRequests);
 
   // Apply filters
   const getFilteredRequests = (requestsList: SwapRequest[]) => {
@@ -295,6 +335,14 @@ const SwapRequests: React.FC = () => {
                   >
                     View Profile
                   </button>
+                  {request.status === 'accepted' && (
+  <button
+    onClick={() => handleStartVideoCall(request)}
+    className="action-btn video-call-btn"
+  >
+    Start Video Call
+  </button>
+)}
                   
                   {activeTab === 'received' && request.status === 'pending' && (
                     <>
@@ -313,6 +361,7 @@ const SwapRequests: React.FC = () => {
                         Reject
                       </button>
                     </>
+                    
                   )}
                 </div>
               </div>
