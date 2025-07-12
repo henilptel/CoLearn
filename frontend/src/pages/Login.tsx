@@ -74,10 +74,9 @@ const Login: React.FC = () => {
       setSubmitting(false);
     }
   };
-
-  const handleGoogleLogin = () => {
-    console.log("Google login clicked");
-  };
+const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:5000/api/auth/google";
+};
 
   return (
     <div className="grid-auth">

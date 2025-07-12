@@ -60,7 +60,7 @@ const Register: React.FC = () => {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
       const response = await userAPI.googleRegister(credentialResponse);
-      localStorage.setItem('token', response.token);
+      localStorage.setItem('token', response.data.token);
       navigate('/register-bio');
     } catch (err: any) {
       setError(err.message || 'Google registration failed');

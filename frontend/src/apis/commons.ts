@@ -25,7 +25,7 @@ interface UploadDocumentsResponse {
 }
 
 // TODO put into env
-const API_URL: string = "http://localhost:3000";
+const API_URL: string = "http://localhost:5000";
 
 const axiosInstance = axios.create({
   withCredentials: true,
