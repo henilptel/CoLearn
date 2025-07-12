@@ -4,6 +4,7 @@ import App from "./pages/App";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/clean-community.scss";
 import "./styles/homepage.scss";
+import "./styles/admin.scss";
 import "./styles/style.css";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
@@ -21,6 +22,7 @@ import RegisterProfession from "./pages/RegisterProfession";
 import RegisterBio from "./pages/RegisterBio";
 import RegisterTimeSlots from "./pages/RegisterTimeSlots";
 import Homepage from "./pages/HomePage";
+import AdminDashboard from "./pages/AdminDashboard";
 
 // Import types
 import type { Member, EventDetails } from "./types";
@@ -201,6 +203,10 @@ const router = createBrowserRouter([
        {
         path: "requests",
         element: <SwapRequests/>
+      },
+      {
+        path: "admin",
+        element: <AdminDashboard/>
       }
     ],
   },
