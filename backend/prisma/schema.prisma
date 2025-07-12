@@ -128,3 +128,14 @@ model TimeSlot {
   
   @@map("time_slots")
 }
+
+model Session {
+  id        String   @id @default(uuid())
+  sid       String   @unique @db.VarChar(255) 
+  data      String   @db.Text
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
