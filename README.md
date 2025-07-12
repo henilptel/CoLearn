@@ -23,7 +23,6 @@
 - [🎯 Project Overview](#-project-overview)
 - [✨ Features](#-features)
 - [🏗️ Architecture](#-architecture)
-- [🛠️ Tech Stack](#-tech-stack)
 - [📁 Project Structure](#-project-structure)
 - [🔧 Setup & Installation](#-setup--installation)
 - [📚 API Documentation](#-api-documentation)
