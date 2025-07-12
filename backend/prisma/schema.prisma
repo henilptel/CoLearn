@@ -30,6 +30,9 @@ model User {
   timeSlots       TimeSlot[]
   skillsOffered   Skill[]       @relation("SkillsOffered")
   skillsWanted    Skill[]       @relation("SkillsWanted")
+  bannedUser      BannedUser?
+  reportedUserReports UserReport[] @relation("ReportedUser")
+  reporterUserReports UserReport[] @relation("UserReporter")
 
   @@map("users")
 }
@@ -130,4 +133,79 @@ enum SkillCategory {
   HOME_IMPROVEMENT
   GARDENING
   OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
+
+model Admin {
+    id        String   @id @default(uuid())
+    email     String   @unique @db.VarChar(100)
+    name      String   @db.VarChar(100)
+    password  String   // Hashed password
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    isActive  Boolean  @default(true)
+
+    // Relations
+    bannedUsers        BannedUser[]
+    platformMessages   PlatformMessage[]
+    userReports        UserReport[]
+
+    @@map("admins")
+}
+
+
+model BannedUser {
+    id        String   @id @default(uuid())
+    userId    String   @unique
+    adminId   String
+    reason    String   @db.Text
+    bannedAt  DateTime @default(now())
+    isActive  Boolean  @default(true) 
+
+    // Relations
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+    @@map("banned_users")
+}
+
+
+model PlatformMessage {
+    id        String      @id @default(uuid())
+    title     String      @db.VarChar(200)
+    content   String      @db.Text
+    type      String      @default("GENERAL")
+    adminId   String
+    createdAt DateTime    @default(now())
+    isActive  Boolean     @default(true)
+
+    // Relations
+    admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+    @@map("platform_messages")
+}
+
+
+model UserReport {
+    id           String       @id @default(uuid())
+    reportedId   String
+    reporterId   String?
+    adminId      String?
+    reason       String       @db.Text
+    actionTaken   String      @db.Text
+    status       ReportStatus @default(PENDING)
+    createdAt    DateTime     @default(now())
+    resolvedAt   DateTime?
+
+    // Relations
+    reported User   @relation("ReportedUser", fields: [reportedId], references: [id], onDelete: Cascade)
+    reporter User?  @relation("UserReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+    admin    Admin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+    @@map("user_reports")
 }
