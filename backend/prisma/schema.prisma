@@ -24,6 +24,8 @@ model User {
   skillsWanted   Skill[]      @relation("SkillsWanted")
   swapRequests   SwapRequest[] @relation("SwapRequester")
   swapReceived   SwapRequest[] @relation("SwapReceiver")
+  ratingsGiven   Rating[]     @relation("RatingGiver")
+  ratingsReceived Rating[]    @relation("RatingReceiver")
   timeSlots      TimeSlot[]   // User's availability schedule
   
   @@map("users")
@@ -58,6 +60,23 @@ model SwapRequest {
   receiver  User @relation("SwapReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
   
   @@map("swap_requests")
+}
+
+// Ratings and feedback system
+model Rating {
+  id         String @id @default(uuid())
+  rating     Int    @db.SmallInt // 1-5 scale
+  feedback   String @db.Text
+  giverId    String
+  receiverId String
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  giver    User @relation("RatingGiver", fields: [giverId], references: [id], onDelete: Cascade)
+  receiver User @relation("RatingReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@unique([giverId, receiverId]) // One rating per user pair
+  @@map("ratings")
 }
 
 // Enums
