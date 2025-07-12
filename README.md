@@ -27,13 +27,9 @@
 - [📁 Project Structure](#-project-structure)
 - [🔧 Setup & Installation](#-setup--installation)
 - [📚 API Documentation](#-api-documentation)
-- [🎨 UI/UX Highlights](#-uiux-highlights)
 - [✅ Completed Features](#-completed-features)
 - [🚧 In Progress](#-in-progress)
 - [📸 Screenshots](#-screenshots)
-- [🔒 Security](#-security)
-- [📊 Performance](#-performance)
-- [🤝 Contributing](#-contributing)
 
 ## 🎯 Project Overview
 
