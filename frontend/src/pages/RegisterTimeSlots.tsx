@@ -53,7 +53,7 @@ const RegisterTimeSlots: React.FC = () => {
 
   const handleSubmit = (data: FormValues) => {
     createTimeSlots(data)
-      .then(() => navigate("/verification"))
+      .then(() => navigate("/"))
       .catch((err) => console.error(err))
   }
 

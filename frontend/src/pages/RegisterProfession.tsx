@@ -56,7 +56,7 @@ const RegisterProfession: React.FC = () => {
         skillsOffered: formData.skillsOffered,
         skillsWanted: formData.skillsWanted,
       })
-      navigate("/register-timeslots")
+      navigate("/register/4")
     } catch (err: any) {
       setError(err.message || "Failed to update skills")
     } finally {

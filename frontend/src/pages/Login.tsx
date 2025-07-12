@@ -61,7 +61,7 @@ const Login: React.FC = () => {
         }
         
         setTimeout(() => {
-          navigate("/dashboard");
+          navigate("/");
         }, 1500);
       } else {
         throw new Error(response.data.message || "Login failed");

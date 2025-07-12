@@ -42,7 +42,6 @@ exports.login = (req, res, next) => {
   })(req, res, next);
 };
 
-
 exports.logout = (req, res) => {
   req.logout(() => {
     res.json({ message: "Logged out successfully" });
@@ -73,6 +72,122 @@ exports.googleCallback = async (req, res, next) => {
     // This is a placeholder for Google callback
     // You would need to implement Google OAuth verification here
     res.status(501).json({ message: "Google callback not implemented yet" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.registerUser = async (req, res, next) => {
+  try {
+    const {
+      email,
+      password,
+      name,
+      location,
+      profilePhoto,
+      isPublic,
+      bio,
+      skillsOffered,
+      skillsWanted,
+      skillsInterested
+    } = req.body;
+
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: "Email, password, and name are required." });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ message: "Email already registered." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user with all profile data in a transaction
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name,
+          location,
+          profilePhoto,
+          isPublic: isPublic !== undefined ? isPublic : true,
+          bio,
+        },
+      });
+
+      // Handle skills offered
+      if (skillsOffered && skillsOffered.length > 0) {
+        for (const skillName of skillsOffered) {
+          let skill = await tx.skill.findUnique({ where: { name: skillName } });
+          if (!skill) {
+            skill = await tx.skill.create({ data: { name: skillName } });
+          }
+          await tx.user.update({
+            where: { id: newUser.id },
+            data: {
+              skillsOffered: {
+                connect: { id: skill.id },
+              },
+            },
+          });
+        }
+      }
+
+      // Handle skills wanted
+      if (skillsWanted && skillsWanted.length > 0) {
+        for (const skillName of skillsWanted) {
+          let skill = await tx.skill.findUnique({ where: { name: skillName } });
+          if (!skill) {
+            skill = await tx.skill.create({ data: { name: skillName } });
+          }
+          await tx.user.update({
+            where: { id: newUser.id },
+            data: {
+              skillsWanted: {
+                connect: { id: skill.id },
+              },
+            },
+          });
+        }
+      }
+
+      // Handle skills interested (same as skills wanted for now)
+      if (skillsInterested && skillsInterested.length > 0) {
+        for (const skillName of skillsInterested) {
+          let skill = await tx.skill.findUnique({ where: { name: skillName } });
+          if (!skill) {
+            skill = await tx.skill.create({ data: { name: skillName } });
+          }
+          await tx.user.update({
+            where: { id: newUser.id },
+            data: {
+              skillsWanted: {
+                connect: { id: skill.id },
+              },
+            },
+          });
+        }
+      }
+
+      return newUser;
+    });
+
+    // Get the created user with all relations
+    const userWithRelations = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        skillsOffered: true,
+        skillsWanted: true,
+      },
+    });
+
+    const { password: pw, ...userWithoutPassword } = userWithRelations;
+    res.status(201).json({
+      message: "User registered successfully",
+      user: userWithoutPassword
+    });
   } catch (err) {
     next(err);
   }

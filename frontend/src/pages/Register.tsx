@@ -46,7 +46,7 @@ const Register: React.FC = () => {
       
       if (response.data.message === "User registered successfully") {
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/register-bio');
+        navigate('/register/1');
       } else {
         throw new Error(response.data.message || 'Registration failed');
       }
@@ -61,7 +61,7 @@ const Register: React.FC = () => {
     try {
       const response = await userAPI.googleRegister(credentialResponse);
       localStorage.setItem('token', response.data.token);
-      navigate('/register-bio');
+      navigate('/register/1');
     } catch (err: any) {
       setError(err.message || 'Google registration failed');
     }

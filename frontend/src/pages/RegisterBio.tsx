@@ -70,7 +70,7 @@ const RegisterBio: React.FC = () => {
 
       setSuccess("Profile created successfully! Redirecting...")
       setTimeout(() => {
-        navigate("/dashboard")
+        navigate("/")
       }, 1500)
     } catch (err: any) {
       setError(err.message || "Failed to create profile. Please try again.")
