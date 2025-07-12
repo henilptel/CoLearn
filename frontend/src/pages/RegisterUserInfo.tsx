@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import states from "../misc/states";
 import languages from "../misc/languages";
 import CleanAuthSidebar from "../components/CleanAuthSidebar";
+import { useUserInfoRegistration } from "../contexts/RegistrationContext";
 
 interface FormValues {
   name: string;
@@ -19,6 +20,7 @@ interface FormValues {
 
 const RegisterUserInfo: React.FC = () => {
   const navigate = useNavigate();
+  const { data: userInfoData, updateData } = useUserInfoRegistration();
 
   const schema = yup.object({
     name: yup.string().required("This is a required field"),
@@ -31,19 +33,23 @@ const RegisterUserInfo: React.FC = () => {
   });
 
   const initialValues: FormValues = {
-    name: "",
-    gender: "Gender",
-    language: "English",
-    location: "Location",
+    name: userInfoData?.name || "",
+    gender: userInfoData?.gender || "Gender",
+    language: userInfoData?.language || "English",
+    location: userInfoData?.location || "Location",
   };
 
   const handleSubmit = (data: FormValues) => {
+    // Save data to registration context
+    updateData(data);
+    
+    // Navigate to next step
     navigate("/register/2", { state: data });
   };
 
   return (
     <div className="grid-auth">
-      <CleanAuthSidebar variant="userinfo" />
+      <CleanAuthSidebar variant="register" />
       
       <div className="auth-content">
         <div className="auth-form">

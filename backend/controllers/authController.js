@@ -59,9 +59,39 @@ exports.checkAuth = (req, res) => {
 
 exports.googleRegister = async (req, res, next) => {
   try {
-    // This is a placeholder for Google registration
-    // You would need to implement Google OAuth verification here
-    res.status(501).json({ message: "Google registration not implemented yet" });
+    const { credential } = req.body; // credential is the Google ID token from frontend
+
+    if (!credential) {
+      return res.status(400).json({ message: "Missing Google credential" });
+    }
+
+    // Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    const email = payload.email;
+    const name = payload.name;
+    const profilePhoto = payload.picture;
+
+    // Find or create user
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          profilePhoto,
+          isPublic: true,
+          password: "", // No password for Google users
+        },
+      });
+    }
+    // Remove password before sending user object
+    const { password, ...userWithoutPassword } = user;
+    res.status(201).json({ message: "Google registration successful", user: userWithoutPassword });
   } catch (err) {
     next(err);
   }
@@ -69,9 +99,55 @@ exports.googleRegister = async (req, res, next) => {
 
 exports.googleCallback = async (req, res, next) => {
   try {
-    // This is a placeholder for Google callback
-    // You would need to implement Google OAuth verification here
-    res.status(501).json({ message: "Google callback not implemented yet" });
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ message: "Missing Google OAuth code" });
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_CALLBACK_URL
+    );
+
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+    const { data } = await oauth2.userinfo.get();
+
+    const email = data.email;
+    const name = data.name;
+    const profilePhoto = data.picture;
+
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          profilePhoto,
+          isPublic: true,
+          password: "",
+          googleAccessToken: tokens.access_token,
+          googleRefreshToken: tokens.refresh_token,
+          googleTokenExpiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+        },
+      });
+    } else {
+      user = await prisma.user.update({
+        where: { email },
+        data: {
+          googleAccessToken: tokens.access_token,
+          googleRefreshToken: tokens.refresh_token,
+          googleTokenExpiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+        },
+      });
+    }
+
+    const { password, ...userWithoutPassword } = user;
+    res.status(200).json({ message: "Google authentication successful", user: userWithoutPassword });
   } catch (err) {
     next(err);
   }

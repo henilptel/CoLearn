@@ -10,6 +10,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { UserProvider } from "./contexts/UserContext";
 import { SwapRequestProvider } from "./contexts/SwapRequestContext";
+import { RegistrationProvider } from "./contexts/RegistrationContext";
 import SwapRequests from "./pages/SwapRequests";
 
 // Import pages
@@ -210,7 +211,9 @@ createRoot(document.getElementById("root")!).render(
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
       <UserProvider>
         <SwapRequestProvider>
-          <RouterProvider router={router} />
+          <RegistrationProvider>
+            <RouterProvider router={router} />
+          </RegistrationProvider>
         </SwapRequestProvider>
       </UserProvider>
     </GoogleOAuthProvider>
