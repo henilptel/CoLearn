@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { SwapRequest, Member } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import type { Member } from '../types';
+import type { SwapRequest } from '../types.ts';
+import { swapAPI } from '../apis/swap';
 import { getToken, createRoom } from '../apis/meeting';
 
 interface SwapRequestContextType {
@@ -227,7 +230,8 @@ export const SwapRequestProvider: React.FC<SwapRequestProviderProps> = ({ childr
         toUser
       };
 
-      setRequests(prev => [...prev, newRequest]);
+        setRequests(prev => [...prev, newRequest]);
+      }
     } catch (error) {
       console.error('Error sending request:', error);
       throw error;

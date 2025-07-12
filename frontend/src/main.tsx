@@ -4,12 +4,14 @@ import App from "./pages/App";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/clean-community.scss";
 import "./styles/homepage.scss";
+import "./styles/admin.scss";
 import "./styles/style.css";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { UserProvider } from "./contexts/UserContext";
 import { SwapRequestProvider } from "./contexts/SwapRequestContext";
+import { RegistrationProvider } from "./contexts/RegistrationContext";
 import SwapRequests from "./pages/SwapRequests";
 
 // Import pages
@@ -21,6 +23,7 @@ import RegisterBio from "./pages/RegisterBio";
 import RegisterTimeSlots from "./pages/RegisterTimeSlots";
 import Homepage from "./pages/HomePage";
 import Meeting from "./components/Meeting";
+import AdminDashboard from "./pages/AdminDashboard";
 
 // Import types
 import type { Member, EventDetails } from "./types";
@@ -205,6 +208,10 @@ const router = createBrowserRouter([
        {
         path: "meeting",
         element: <Meeting/>
+      },
+      {
+        path: "admin",
+        element: <AdminDashboard/>
       }
     ],
   },
@@ -215,7 +222,9 @@ createRoot(document.getElementById("root")!).render(
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
       <UserProvider>
         <SwapRequestProvider>
-          <RouterProvider router={router} />
+          <RegistrationProvider>
+            <RouterProvider router={router} />
+          </RegistrationProvider>
         </SwapRequestProvider>
       </UserProvider>
     </GoogleOAuthProvider>

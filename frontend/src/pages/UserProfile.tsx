@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUser } from '../contexts/UserContext';
+import { userAPI } from '../apis/user';
 import SwapRequestModal from '../components/SwapRequestModal';
 import type { Member } from '../types';
 import { useSwapRequests } from '../contexts/SwapRequestContext';
@@ -65,6 +66,31 @@ const UserProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { currentUser, updateCurrentUser } = useUser();
+  
+  // Function to transform API user data to Member interface
+  const transformApiUserToMember = (apiUser: any): Member => {
+    return {
+      id: apiUser.id,
+      firstName: apiUser.name?.split(' ')[0] || '',
+      lastName: apiUser.name?.split(' ').slice(1).join(' ') || '',
+      email: apiUser.email,
+      role: 'member',
+      name: apiUser.name || '',
+      rating: apiUser.rating || 0,
+      currentPost: apiUser.currentPost || '',
+      noOfSessions: apiUser.noOfSessions || 0,
+      noOfReviews: apiUser.noOfReviews || 0,
+      experienceYears: apiUser.experience_years || 0,
+      experienceMonths: apiUser.experienceMonths || 0,
+      creditScore: apiUser.creditScore || 0,
+      skillsOffered: apiUser.skillsOffered?.map((skill: any) => skill.name || skill) || [],
+      skillsWanted: apiUser.skillsWanted?.map((skill: any) => skill.name || skill) || [],
+      location: apiUser.location || '',
+      bio: apiUser.bio || '',
+      isPublicProfile: apiUser.isPublic !== undefined ? apiUser.isPublic : true,
+      availability: apiUser.availability || []
+    };
+  };
   const [user, setUser] = useState<Member | null>(null);
   const { sendRequest, requests } = useSwapRequests();
   const [loading, setLoading] = useState(true);
@@ -228,17 +254,22 @@ const UserProfile: React.FC = () => {
       });
       
       // If user has existing time slots, use them
-      if (user.timeSlots) {
-        user.timeSlots.forEach(slot => {
-          initialTimeSlots[slot.day] = slot.slots;
+      if ((user as any).timeSlots) {
+        (user as any).timeSlots.forEach((slot: any) => {
+          const dayName = slot.day.toLowerCase();
+          const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+          if (!initialTimeSlots[capitalizedDay]) {
+            initialTimeSlots[capitalizedDay] = [];
+          }
+          initialTimeSlots[capitalizedDay].push(slot.from);
         });
       } else {
         // Default time slots based on availability
-        if (user.availability.includes('weekends')) {
+        if (user.availability && user.availability.includes('weekends')) {
           initialTimeSlots['Saturday'] = ['09:00', '10:00', '14:00', '15:00'];
           initialTimeSlots['Sunday'] = ['09:00', '10:00', '14:00', '15:00'];
         }
-        if (user.availability.includes('weekday_evenings') || user.availability.includes('evenings')) {
+        if (user.availability && (user.availability.includes('weekday_evenings') || user.availability.includes('evenings'))) {
           ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].forEach(day => {
             initialTimeSlots[day] = ['18:00', '19:00'];
           });
@@ -253,28 +284,59 @@ const UserProfile: React.FC = () => {
     const loadUser = async () => {
       setLoading(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
         let userData: Member;
         if (isOwnProfile) {
-          userData = currentUser!;
+          // Load current user profile
+          if (currentUser) {
+            const response = await userAPI.getUserProfile();
+            userData = transformApiUserToMember(response.data.user);
+            // Add timeSlots manually since it's not in the Member interface
+            (userData as any).timeSlots = response.data.user.timeSlots || [];
+          } else {
+            // No authenticated user, redirect to login or show error
+            navigate('/login');
+            return;
+          }
         } else {
-          userData = mockUsers[userId || ''] || mockUsers.member_001;
+          // Load specific user by ID
+          const response = await userAPI.getUserById(userId!);
+          userData = transformApiUserToMember(response.data.user);
+          // Add timeSlots manually since it's not in the Member interface
+          (userData as any).timeSlots = response.data.user.timeSlots || [];
         }
         
         setUser(userData);
         setEditedUser(userData);
       } catch (error) {
         console.error('Failed to load user:', error);
+        // Fallback to mock data if API fails
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          let userData: Member;
+          if (isOwnProfile) {
+            if (currentUser) {
+              userData = currentUser;
+            } else {
+              navigate('/login');
+              return;
+            }
+          } else {
+            userData = mockUsers[userId || ''] || mockUsers.member_001;
+          }
+          
+          setUser(userData);
+          setEditedUser(userData);
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    if (currentUser) {
-      loadUser();
-    }
-  }, [userId, isOwnProfile, currentUser]);
+    loadUser();
+  }, [userId, isOwnProfile, currentUser, navigate]);
 
   const validateForm = (userData: Member): {[key: string]: string} => {
     const errors: {[key: string]: string} = {};
@@ -336,7 +398,7 @@ const UserProfile: React.FC = () => {
   };
 
   
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editedUser) return;
     
     const errors = validateForm(editedUser);
@@ -347,36 +409,63 @@ const UserProfile: React.FC = () => {
       return;
     }
     
-    // Convert selectedTimeSlots to timeSlots array format
-    const timeSlotArray = days.map(day => ({
-      day,
-      slots: selectedTimeSlots[day] || []
-    }));
-    
-    const updatedUser = {
-      ...editedUser,
-      timeSlots: timeSlotArray
-    };
-    
-    // Update user in context (this persists the changes)
-    updateCurrentUser(updatedUser);
-    
-    setUser(updatedUser);
-    setIsEditing(false);
-    setHasChanges(false);
-    setValidationErrors({});
-    
-    // Show success notification
-    const notification = document.createElement('div');
-    notification.className = 'profile-notification success';
-    notification.textContent = 'Profile updated successfully!';
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-      if (document.body.contains(notification)) {
-        document.body.removeChild(notification);
-      }
-    }, 3000);
+    try {
+      // Convert selectedTimeSlots to timeSlots array format for backend
+      const timeSlotArray = Object.entries(selectedTimeSlots)
+        .filter(([_, slots]) => slots.length > 0)
+        .flatMap(([day, slots]) => 
+          slots.map(slot => ({
+            day: day.toUpperCase(),
+            from: slot,
+            to: slot // You might want to calculate the end time based on session length
+          }))
+        );
+
+      // Prepare data for API
+      const updateData = {
+        name: editedUser.name,
+        location: editedUser.location,
+        bio: editedUser.bio,
+        currentPost: editedUser.currentPost,
+        experienceYears: editedUser.experienceYears,
+        experienceMonths: editedUser.experienceMonths,
+        skillsOffered: editedUser.skillsOffered,
+        skillsWanted: editedUser.skillsWanted,
+        isPublic: editedUser.isPublicProfile,
+        timeSlots: timeSlotArray
+      };
+
+      // Call API to update profile
+      const response = await userAPI.updateProfile(updateData);
+      
+      const updatedUser = {
+        ...editedUser,
+        timeSlots: response.data.user.timeSlots || timeSlotArray
+      };
+
+      // Update user in context (this persists the changes)
+      updateCurrentUser(updatedUser);
+      
+      setUser(updatedUser);
+      setIsEditing(false);
+      setHasChanges(false);
+      setValidationErrors({});
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'profile-notification success';
+      notification.textContent = 'Profile updated successfully!';
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      alert('Failed to save profile. Please try again.');
+    }
   };
 
   const handleDiscard = () => {
@@ -397,9 +486,14 @@ const UserProfile: React.FC = () => {
         initialTimeSlots[day] = [];
       });
       
-      if (user.timeSlots) {
-        user.timeSlots.forEach(slot => {
-          initialTimeSlots[slot.day] = slot.slots;
+      if ((user as any).timeSlots) {
+        (user as any).timeSlots.forEach((slot: any) => {
+          const dayName = slot.day.toLowerCase();
+          const capitalizedDay = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+          if (!initialTimeSlots[capitalizedDay]) {
+            initialTimeSlots[capitalizedDay] = [];
+          }
+          initialTimeSlots[capitalizedDay].push(slot.from);
         });
       }
       

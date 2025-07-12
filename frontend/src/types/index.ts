@@ -35,6 +35,7 @@ export interface Member extends User {
   noOfReviews: number;
   rating: number;
   creditScore: number;
+  timeSlots?: TimeSlot[];
 }
 
 export interface EventDetails {
@@ -225,6 +226,14 @@ export interface AuthResponse {
 }
 
 export interface TimeSlot {
+  id?: string;
+  day: string;
+  from: string;
+  to: string;
+  userId?: string;
+}
+
+export interface TimeSlotOld {
   start: string;
   end: string;
 }
@@ -232,7 +241,7 @@ export interface TimeSlot {
 export interface DayAvailability {
   day: string;
   enabled: boolean;
-  slots: TimeSlot[];
+  slots: TimeSlotOld[];
 }
 
 export interface UserAvailability {

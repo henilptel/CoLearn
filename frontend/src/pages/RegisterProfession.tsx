@@ -1,15 +1,15 @@
-"use client"
-
 import type React from "react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { userAPI } from "../apis/user"
 import CleanAuthSidebar from "../components/CleanAuthSidebar"
+import { useProfessionRegistration } from "../contexts/RegistrationContext"
 
 const RegisterProfession: React.FC = () => {
+  const { data: professionData, updateData } = useProfessionRegistration();
   const [formData, setFormData] = useState({
-    skillsOffered: [] as string[],
-    skillsWanted: [] as string[],
+    skillsOffered: professionData?.skillsOffered || [],
+    skillsWanted: professionData?.skillsWanted || [],
     currentSkill: "",
     currentWantedSkill: "",
   })
@@ -56,7 +56,14 @@ const RegisterProfession: React.FC = () => {
         skillsOffered: formData.skillsOffered,
         skillsWanted: formData.skillsWanted,
       })
-      navigate("/register-timeslots")
+      
+      // Save data to registration context
+      updateData({
+        skillsOffered: formData.skillsOffered,
+        skillsWanted: formData.skillsWanted,
+      });
+      
+      navigate("/register/3")
     } catch (err: any) {
       setError(err.message || "Failed to update skills")
     } finally {
@@ -66,7 +73,7 @@ const RegisterProfession: React.FC = () => {
 
   return (
     <div className="grid-auth">
-      <CleanAuthSidebar variant="profession" />
+      <CleanAuthSidebar variant="register" />
 
       <div className="auth-content">
         <div className="auth-form">

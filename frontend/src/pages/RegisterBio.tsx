@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -9,6 +7,7 @@ import * as yup from "yup"
 import CleanAuthSidebar from "../components/CleanAuthSidebar"
 import { userAPI } from "../apis/user"
 import useProfile from "../hooks/useProfile"
+import { useBioRegistration, useRegistration } from "../contexts/RegistrationContext"
 
 interface BioForm {
   bio: string
@@ -18,11 +17,12 @@ interface BioForm {
 
 const RegisterBio: React.FC = () => {
   const prevForm = useLocation().state
-  const { profile, isProfileLoading } = useProfile()
+  const { data: bioData, updateData } = useBioRegistration();
+  const { registrationData } = useRegistration();
+  const { profile, loading: isProfileLoading } = useProfile()
   const navigate = useNavigate()
 
   const [tags, setTags] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -37,9 +37,9 @@ const RegisterBio: React.FC = () => {
   })
 
   const initialValues: BioForm = {
-    bio: "",
-    location: "",
-    skillsInterested: [],
+    bio: bioData?.bio || "",
+    location: bioData?.location || "",
+    skillsInterested: bioData?.skillsInterested || [],
   }
 
   useEffect(() => {
@@ -59,21 +59,41 @@ const RegisterBio: React.FC = () => {
       setSubmitting(true)
       setError("")
 
-      const profileData = {
-        ...prevForm,
+      // Since the user is already created in the first step, we need to update the profile
+      const profileUpdateData = {
+        // From user info step
+        location: values.location || registrationData.userInfo?.location,
+        
+        // From profession step
+        skillsOffered: registrationData.profession?.skillsOffered || [],
+        skillsWanted: [...(registrationData.profession?.skillsWanted || []), ...values.skillsInterested],
+        currentPost: registrationData.profession?.currentPost,
+        experienceYears: registrationData.profession?.experienceYears,
+        
+        // From bio step (current)
+        bio: values.bio,
+        isPublic: true,
+      };
+
+      console.log('Updating user profile with:', profileUpdateData);
+      
+      // Use the profile update endpoint instead of register
+      await userAPI.updateProfile(profileUpdateData)
+      
+      // Save data to registration context
+      updateData({
         bio: values.bio,
         location: values.location,
         skillsInterested: values.skillsInterested,
-      }
+      });
 
-      await userAPI.registerUser(profileData)
-
-      setSuccess("Profile created successfully! Redirecting...")
+      setSuccess("Profile updated successfully! Redirecting to final step...")
       setTimeout(() => {
-        navigate("/dashboard")
+        navigate("/register/4")
       }, 1500)
     } catch (err: any) {
-      setError(err.message || "Failed to create profile. Please try again.")
+      console.error('Profile update error:', err);
+      setError(err.response?.data?.message || err.message || "Failed to update profile. Please try again.")
     } finally {
       setSubmitting(false)
     }

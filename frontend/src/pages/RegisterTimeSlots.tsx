@@ -8,6 +8,7 @@ import type { FormikProps } from "formik"
 import * as yup from "yup"
 import { createTimeSlots } from "../apis/session"
 import CleanAuthSidebar from "../components/CleanAuthSidebar"
+import { useAvailabilityRegistration } from "../contexts/RegistrationContext"
 
 interface TimeSlot {
   start: string
@@ -26,6 +27,7 @@ interface FormValues {
 
 const RegisterTimeSlots: React.FC = () => {
   const navigate = useNavigate()
+  const { data: registrationData, updateData } = useAvailabilityRegistration()
 
   const daysOfWeek: string[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"]
 
@@ -44,22 +46,47 @@ const RegisterTimeSlots: React.FC = () => {
   })
 
   const initialValues: FormValues = {
-    availability: daysOfWeek.map((day) => ({
+    availability: registrationData?.availability || daysOfWeek.map((day) => ({
       day,
       enabled: day === "SUNDAY",
       slots: day === "SUNDAY" ? [{ start: "09:00", end: "17:00" }] : [],
     })),
   }
 
-  const handleSubmit = (data: FormValues) => {
-    createTimeSlots(data)
-      .then(() => navigate("/verification"))
-      .catch((err) => console.error(err))
+  const handleSubmit = async (data: FormValues) => {
+    try {
+      // Transform the data to match the context structure
+      const transformedAvailability = data.availability.map(dayData => ({
+        day: dayData.day,
+        enabled: dayData.enabled,
+        slots: dayData.slots.map(slot => ({
+          day: dayData.day,
+          start: slot.start,
+          end: slot.end,
+        }))
+      }));
+
+      // Save availability data to context
+      updateData({
+        availability: transformedAvailability,
+      });
+
+      // Send time slots to backend
+      await createTimeSlots(data);
+      
+      // Clear registration data from localStorage after successful completion
+      localStorage.removeItem('registrationData');
+      
+      // Navigate to success page or dashboard
+      navigate("/");
+    } catch (err) {
+      console.error('Failed to complete registration:', err);
+    }
   }
 
   return (
     <div className="grid-auth">
-      <CleanAuthSidebar variant="timeslots" />
+      <CleanAuthSidebar variant="schedule" />
 
       <div className="auth-content">
         <div className="auth-form">

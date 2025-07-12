@@ -6,6 +6,7 @@ import * as yup from "yup";
 import CleanAuthSidebar from "../components/CleanAuthSidebar";
 import { userAPI } from "../apis/user";
 import type { LoginUser } from "../apis/user";
+import { useUser } from "../contexts/UserContext";
 
 interface LoginForm {
   email: string;
@@ -15,6 +16,7 @@ interface LoginForm {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { updateCurrentUser } = useUser();
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState<"success" | "error">("success");
@@ -54,14 +56,17 @@ const Login: React.FC = () => {
         setAlertMessage("Welcome back! Redirecting to your dashboard...");
         setShowAlert(true);
         
-        // Store user data instead of token since we're using session auth
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        // Update user context with session data
+        if (response.data.user) {
+          updateCurrentUser(response.data.user);
+        }
+        
         if (values.rememberMe) {
           localStorage.setItem("rememberMe", "true");
         }
         
         setTimeout(() => {
-          navigate("/dashboard");
+          navigate("/");
         }, 1500);
       } else {
         throw new Error(response.data.message || "Login failed");

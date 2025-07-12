@@ -12,7 +12,9 @@ const bcrypt = require("bcryptjs");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 const authRoutes = require("./routes/authRoutes");
-const userRoutes = require('./routes/userRoutes');
+const userRoutes = require("./routes/userRoutes");
+const swapRoutes = require("./routes/swapRoutes");
+const sessionRoutes = require("./routes/sessionRoutes");
 const meetingRoutes = require("./routes/meetingRoutes");
 
 const app = express();
@@ -81,6 +83,7 @@ passport.use(
             data: {
               email: profile.emails[0].value,
               name: profile.displayName,
+              password:"",
               profilePhoto: profile.photos[0]?.value,
               isPublic: true,
               googleAccessToken: accessToken,
@@ -118,7 +121,9 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
-app.use("/api/user",userRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/session", sessionRoutes);
+app.use("/api/swap",swapRoutes);
 app.use("/api/meetings", meetingRoutes);
 
 const PORT = process.env.PORT || 5000;

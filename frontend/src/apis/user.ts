@@ -87,15 +87,39 @@ function getUserInfo(params?: GetUserInfoParams): Promise<AxiosResponse<any>> {
 }
 
 function getAllTags(): Promise<AxiosResponse<any>> {
-  return axiosInstance.get(`/tags`);
+  return axiosInstance.get(`/users/tags`);
 }
 
 function getUserProfile(): Promise<AxiosResponse<any>> {
-  return axiosInstance.get("/profile");
+  return axiosInstance.get("/users/profile");
+}
+
+function getProfile(): Promise<AxiosResponse<any>> {
+  return axiosInstance.get("/users/profile");
 }
 
 function editUserProfile(data: Partial<UserProfile>): Promise<AxiosResponse<any>> {
-  return axiosInstance.put("/profile", data);
+  return axiosInstance.put("/users/profile", data);
+}
+
+function updateProfile(data: Partial<UserProfile>): Promise<AxiosResponse<any>> {
+  return axiosInstance.put("/users/profile", data);
+}
+
+function checkAuthStatus(): Promise<AxiosResponse<any>> {
+  return axiosInstance.get("/auth/status");
+}
+
+function getAllUsers(): Promise<AxiosResponse<any>> {
+  return axiosInstance.get("/users");
+}
+
+function searchUsers(query: string): Promise<AxiosResponse<any>> {
+  return axiosInstance.get(`/users/search?q=${encodeURIComponent(query)}`);
+}
+
+function getUserById(userId: string): Promise<AxiosResponse<any>> {
+  return axiosInstance.get(`/users/${userId}`);
 }
 
 // Create userAPI object for easier importing
@@ -111,7 +135,13 @@ const userAPI = {
   getUserInfo,
   getAllTags,
   getUserProfile,
+  getProfile,
   editUserProfile,
+  updateProfile,
+  checkAuthStatus,
+  getAllUsers,
+  searchUsers,
+  getUserById,
 };
 
 // Export individual functions (backward compatibility)
@@ -127,7 +157,10 @@ export {
   getAllTags,
   getUserProfile,
   editUserProfile,
+  updateProfile,
   getUserInfo,
+  checkAuthStatus,
+  getUserById,
 };
 
 // Export the userAPI object

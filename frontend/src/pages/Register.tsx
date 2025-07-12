@@ -3,13 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { userAPI } from '../apis/user';
 import CleanAuthSidebar from '../components/CleanAuthSidebar';
+import { useBasicRegistration } from '../contexts/RegistrationContext';
+import { useUser } from '../contexts/UserContext';
 
 const Register: React.FC = () => {
+  const { data: basicData, updateData } = useBasicRegistration();
+  const { updateCurrentUser } = useUser();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
+    firstName: basicData?.firstName || '',
+    lastName: basicData?.lastName || '',
+    email: basicData?.email || '',
+    password: basicData?.password || '',
     confirmPassword: ''
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -45,8 +49,21 @@ const Register: React.FC = () => {
       });
       
       if (response.data.message === "User registered successfully") {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/register-bio');
+        // Update user context with session data
+        if (response.data.user) {
+          updateCurrentUser(response.data.user);
+        }
+        
+        // Store basic registration data in context for multi-step flow
+        updateData({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+        });
+        
+        // Navigate to next step
+        navigate('/register/1');
       } else {
         throw new Error(response.data.message || 'Registration failed');
       }
@@ -61,7 +78,7 @@ const Register: React.FC = () => {
     try {
       const response = await userAPI.googleRegister(credentialResponse);
       localStorage.setItem('token', response.data.token);
-      navigate('/register-bio');
+      navigate('/register/1');
     } catch (err: any) {
       setError(err.message || 'Google registration failed');
     }
